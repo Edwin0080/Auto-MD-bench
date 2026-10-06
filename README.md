@@ -109,6 +109,18 @@ python tasks/seer/build.py seer_case_listing.csv --out packages
 
 Builds use fixed seeds and reproduce the packages used in the paper.
 
+**Access to the restricted data.**
+
+- MIMIC-IV and eICU-CRD: create a [PhysioNet account](https://physionet.org/register/), complete the
+  [CITI "Data or Specimens Only Research" course](https://physionet.org/about/citi-course/), apply for
+  [credentialed access](https://physionet.org/settings/credentialing/), then sign the data use
+  agreement on the [MIMIC-IV](https://physionet.org/content/mimiciv/3.1/) and
+  [eICU-CRD](https://physionet.org/content/eicu-crd/2.0/) pages and download the files there.
+- SEER: request SEER Research data in the [SEER data request system](https://seerdataaccess.cancer.gov/seer-data-access)
+  ([instructions](https://seer.cancer.gov/data/access.html)) and accept the SEER Research Data Use
+  Agreement. After approval, log in to [SEER*Stat](https://seer.cancer.gov/seerstat/) with the
+  same email and export the case listing.
+
 ## Grade a submission
 
 ```bash
