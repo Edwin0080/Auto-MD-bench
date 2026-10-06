@@ -9,7 +9,9 @@ The benchmark has 15 tasks from 10 clinical datasets: 7 survival analysis tasks,
 tasks and 3 sequential prediction tasks. Five tasks are external validations, with test data from
 another cohort, hospital or time period.
 
-![Overview](assets/overview.png)
+![Overview](docs/assets/overview.png)
+
+The project page with the results is `docs/index.html`; open it in a browser.
 
 **Contents**
 [Tasks](#tasks) ·

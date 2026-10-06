@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto-MD-bench</title>
+<meta name="description" content="Auto-MD-bench: Evaluating autoresearch agents for real-world medical tasks. 15 tasks from 10 clinical datasets; primary score, risk calibration and external validation.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230c1829'/%3E%3Cpath d='M4 18h6l2-3 3 9 4-16 3 10h6' fill='none' stroke='%23f0a35e' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a1424;
+  --ink-2: #102038;
+  --text: #17212e;
+  --muted: #5a6878;
+  --faint: #8a97a6;
+  --line: #e2e7ee;
+  --bg: #ffffff;
+  --soft: #f5f7fa;
+  --blue: #2f5d7c;
+  --blue-2: #4f86ad;
+  --blue-soft: #e9f1f7;
+  --orange: #d9772b;
+  --orange-2: #f0a35e;
+  --orange-soft: #fcf0e5;
+  --green: #3f7a68;
+  --green-soft: #e8f3ef;
+  --c-aide: #c9962c;
+  --c-codex: #2f5d7c;
+  --c-auto: #3f8f7c;
+  --c-ais: #8a6bb5;
+  --c-ref: #17212e;
+  --radius: 14px;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.65 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+img { max-width: 100%; height: auto; display: block; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.narrow { max-width: 820px; margin: 0 auto; }
+
+/* ---------- hero ---------- */
+.hero {
+  position: relative; overflow: hidden; color: #e8eef6; text-align: center;
+  background:
+    radial-gradient(900px 420px at 15% 0%, rgba(79,134,173,.35), transparent 60%),
+    radial-gradient(800px 380px at 90% 20%, rgba(217,119,43,.22), transparent 60%),
+    linear-gradient(180deg, #0a1424 0%, #0d1a2e 100%);
+  padding: 96px 0 0;
+}
+.hero::before { /* ECG paper grid */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+.hero > * { position: relative; }
+.eyebrow {
+  display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: #9fb6cc; border: 1px solid rgba(159,182,204,.3); border-radius: 999px; padding: 5px 14px; margin-bottom: 26px;
+}
+.hero h1 {
+  margin: 0; font-size: clamp(44px, 8vw, 92px); line-height: 1.02; font-weight: 800; letter-spacing: -.035em; color: #fff;
+}
+.hero h1 .grad {
+  background: linear-gradient(100deg, #ffc285 0%, #f19447 40%, #df6f2c 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero .subtitle {
+  margin: 18px auto 0; max-width: 760px; font-size: clamp(19px, 2.4vw, 26px); line-height: 1.35; font-weight: 500; color: #d5e0ec;
+}
+.hero .authors { margin: 22px 0 0; font-size: 16px; color: #93a5b8; }
+.hero .authors b { color: #c9d6e3; font-weight: 600; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 30px 0 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px; border-radius: 999px;
+  font-size: 15px; font-weight: 600; color: #fff; background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18); transition: background .15s, border-color .15s, transform .15s;
+}
+.btn:hover { text-decoration: none; background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.35); transform: translateY(-1px); }
+.btn.primary { background: var(--orange); border-color: var(--orange); }
+.btn.primary:hover { background: #e58a42; }
+.btn.off { opacity: .55; cursor: default; }
+.btn.off:hover { transform: none; background: rgba(255,255,255,.08); }
+.btn svg { width: 17px; height: 17px; }
+.stats {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin: 64px auto 0; max-width: 1000px;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+.stat { padding: 22px 8px 30px; }
+.stat + .stat { border-left: 1px solid rgba(255,255,255,.08); }
+.stat b { display: block; font-size: 34px; line-height: 1; font-weight: 800; color: #fff; letter-spacing: -.02em; }
+.stat span { display: block; margin-top: 8px; font-size: 13px; color: #93a5b8; line-height: 1.35; }
+.ecg { display: block; width: 100%; height: 70px; margin-top: -10px; }
+.ecg path { fill: none; stroke: url(#ecgGrad); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round;
+  stroke-dasharray: 2600; stroke-dashoffset: 2600; animation: draw 3.2s ease-out .3s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.ecg path.pulse { stroke: #ffe1c2; stroke-width: 2.6; stroke-dasharray: 70 3000; stroke-dashoffset: 70;
+  animation: pulse 5s linear 3.4s infinite; filter: drop-shadow(0 0 5px rgba(240,163,94,.9)); }
+@keyframes pulse { from { stroke-dashoffset: 70; } to { stroke-dashoffset: -1870; } }
+::selection { background: #f7d2b1; color: #17212e; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+/* ---------- nav ---------- */
+nav.top {
+  position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.88);
+  backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+nav.top .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
+nav.top .brand { font-weight: 800; color: var(--text); letter-spacing: -.02em; white-space: nowrap; }
+nav.top .brand span { color: var(--orange); }
+nav.top .links { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-left: auto; }
+nav.top .links::-webkit-scrollbar { display: none; }
+nav.top .links a { color: var(--muted); font-size: 14.5px; font-weight: 500; padding: 6px 10px; border-radius: 8px; white-space: nowrap; }
+nav.top .navbtn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px; background: var(--ink-2); color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; }
+nav.top .navbtn:hover { text-decoration: none; background: #1d3354; }
+nav.top .navbtn svg { width: 15px; height: 15px; }
+nav.top .links a:hover, nav.top .links a.on { color: var(--text); background: var(--soft); text-decoration: none; }
+
+/* ---------- sections ---------- */
+section { padding: 88px 0; }
+section.alt { background: var(--soft); }
+.kicker { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--orange); margin: 0 0 10px; }
+h2 { font-size: clamp(30px, 4vw, 42px); line-height: 1.15; letter-spacing: -.025em; font-weight: 800; margin: 0 0 16px; }
+h3 { font-size: 21px; line-height: 1.3; letter-spacing: -.01em; font-weight: 700; margin: 0 0 8px; }
+.lead { font-size: 19px; color: var(--muted); margin: 0 0 40px; max-width: 760px; }
+.center { text-align: center; }
+.center .lead { margin-left: auto; margin-right: auto; }
+
+figure { margin: 0; }
+.figure-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; box-shadow: 0 1px 2px rgba(16,32,56,.04), 0 12px 40px -18px rgba(16,32,56,.18); }
+figcaption { margin-top: 18px; font-size: 15px; color: var(--muted); line-height: 1.6; }
+figcaption b { color: var(--text); }
+
+a.zoom { display: block; cursor: zoom-in; }
+.abstract { font-size: 17.5px; line-height: 1.75; color: #2a3646; text-align: justify; hyphens: auto; }
+
+/* ---------- findings ---------- */
+.findings { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: stretch; }
+.chart-card { background: #fff; color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 22px 14px; }
+.chart-card h3 { font-size: 16px; margin: 0 0 2px; }
+.chart-card .sub { font-size: 13.5px; color: var(--muted); margin: 0 0 6px; }
+.hl { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+section.dark {
+  color: #dce5ef;
+  background:
+    radial-gradient(700px 360px at 85% 10%, rgba(217,119,43,.16), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, rgba(79,134,173,.22), transparent 60%),
+    #0c1829;
+}
+section.dark h2 { color: #fff; }
+section.dark .lead { color: #a3b3c5; }
+section.dark .kicker { color: var(--orange-2); }
+section.dark .hl .item { background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.1); }
+section.dark .hl .num { color: #9cc7e6; }
+section.dark .hl .num.warn { color: var(--orange-2); }
+section.dark .hl .num small { color: #7f93a8; }
+section.dark .hl p { color: #c2cfdc; }
+section.dark .chart-card { border-color: transparent; box-shadow: 0 20px 50px -20px rgba(0,0,0,.6); }
+.hl .item { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 20px 18px; }
+.hl .num { font-size: 32px; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; color: var(--blue); white-space: nowrap; }
+.hl .num.warn { color: var(--orange); }
+.hl .num small { font-size: 16px; font-weight: 600; color: var(--faint); letter-spacing: 0; }
+.hl p { margin: 10px 0 0; font-size: 15px; line-height: 1.55; color: #3a4757; }
+svg text { font-family: Inter, system-ui, sans-serif; }
+
+/* ---------- tasks ---------- */
+.types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.type { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 22px 20px; }
+.type .ti { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); }
+.type .ti svg { width: 22px; height: 22px; }
+.type h3 { margin: 16px 0 6px; display: flex; align-items: baseline; gap: 10px; }
+.type h3 span { font-size: 15px; font-weight: 700; color: var(--faint); }
+.type p { margin: 0 0 16px; font-size: 15px; line-height: 1.55; color: var(--muted); }
+.tl { display: flex; flex-wrap: wrap; gap: 6px; }
+.tl span { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 8px; background: var(--soft); color: #3a4757; border: 1px solid var(--line); }
+.tl span.x { background: var(--orange-soft); color: #a8541a; border-color: #f4d6bb; }
+.tl-key { display: inline-block; width: 12px; height: 12px; border-radius: 4px; background: var(--soft); border: 1px solid var(--line); vertical-align: -1px; margin-right: 6px; }
+.tl-key.x { background: var(--orange-soft); border-color: #f4d6bb; }
+details.more { margin-top: 28px; }
+details.more summary { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--blue);
+  padding: 9px 16px; border: 1px solid var(--line); border-radius: 999px; background: #fff; list-style: none; margin-bottom: 18px; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::before { content: "+"; font-weight: 800; }
+details.more[open] summary::before { content: "−"; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.chip { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: #fff; border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; transition: all .15s; }
+.chip:hover { border-color: #c5ceda; color: var(--text); }
+.chip.on { background: var(--ink-2); border-color: var(--ink-2); color: #fff; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { padding: 11px 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); white-space: nowrap; }
+thead th { font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); background: #fbfcfd; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: #fafbfd; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.group td { background: var(--soft) !important; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 14px; }
+.code { font-family: var(--mono); font-size: 12.5px; color: var(--faint); }
+.tag { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.tag.int { background: var(--soft); color: var(--muted); }
+.tag.ext { background: var(--orange-soft); color: #b65f1c; }
+.tag.pub { background: var(--green-soft); color: var(--green); }
+.tag.cred { background: var(--blue-soft); color: var(--blue); }
+.note { font-size: 14px; color: var(--muted); margin: 14px 2px 0; }
+
+/* ---------- protocol ---------- */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 8px; position: relative; }
+.step { padding: 0 22px 0 0; position: relative; }
+.step .dot { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); color: var(--blue); }
+.step .dot svg { width: 22px; height: 22px; }
+.step::after { content: ""; position: absolute; top: 22px; left: 56px; right: 14px; border-top: 1px dashed #c3ccd8; }
+.step:last-child::after { display: none; }
+.step h3 { font-size: 17px; margin: 16px 0 6px; }
+.step p { margin: 0; font-size: 15px; color: var(--muted); line-height: 1.55; }
+.agents { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 18px; }
+.agent { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 16px; border-top: 3px solid var(--c); display: flex; flex-direction: column; }
+.agent .an { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.agent .at { font-size: 12.5px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+.agent p { margin: 10px 0 12px; font-size: 14.5px; line-height: 1.55; color: #3a4757; }
+.agent dl { margin: auto 0 0; font-size: 13px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.agent dt { color: var(--faint); }
+.agent dd { margin: 0; color: var(--text); font-weight: 500; }
+.measures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 48px; }
+.measure { border-top: 3px solid var(--blue); padding-top: 16px; }
+.measure.o { border-color: var(--orange); }
+.measure p { margin: 0; font-size: 15px; color: var(--muted); }
+.formula { font-family: var(--mono); font-size: 13.5px; background: var(--soft); border-radius: 8px; padding: 2px 7px; color: var(--text); white-space: nowrap; }
+
+/* ---------- leaderboard ---------- */
+.tabs { display: inline-flex; gap: 4px; padding: 4px; background: #e9edf2; border-radius: 12px; margin: 0 0 18px; flex-wrap: wrap; }
+.tab { font: inherit; font-size: 14.5px; font-weight: 600; color: var(--muted); background: transparent; border: 0; border-radius: 9px; padding: 8px 16px; cursor: pointer; }
+.tab.on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(16,32,56,.12); }
+.panel { display: none; }
+.panel.on { display: block; }
+.sys { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.sys small { font-weight: 500; color: var(--faint); font-size: 13px; }
+.ref-row td { background: #fbfcfd; }
+.ref-row .sys { font-style: italic; font-weight: 600; color: var(--muted); }
+.bar { display: inline-flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.bar i { display: block; height: 8px; border-radius: 4px; background: var(--blue); min-width: 2px; }
+.bar i.o { background: var(--orange); }
+.bar .bg { width: 120px; height: 8px; border-radius: 4px; background: #eef1f5; display: flex; justify-content: flex-start; }
+.pm { color: var(--faint); font-size: 13px; }
+.best { font-weight: 800; }
+.heat { table-layout: fixed; min-width: 760px; }
+.heat th:first-child { width: 25%; }
+.heat td.cell { text-align: right; font-variant-numeric: tabular-nums; }
+.heat td.cell .pm { display: block; font-size: 11.5px; line-height: 1.1; color: rgba(23,33,46,.5); }
+.legend-line { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13.5px; color: var(--muted); margin: 12px 2px 0; }
+.ratio { display: inline-block; min-width: 46px; text-align: center; font-size: 12.5px; font-weight: 600; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+
+/* ---------- analysis ---------- */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+.prose p { margin: 0 0 14px; color: #34404f; }
+.prose p:last-child { margin-bottom: 0; }
+
+/* ---------- code ---------- */
+.codebox { background: #0d1726; color: #d7e2ee; border-radius: var(--radius); overflow: hidden; border: 1px solid #1c2b42; }
+.split { display: grid; grid-template-columns: 1fr 1.25fr; gap: 48px; align-items: center; }
+.split .lead { margin-bottom: 20px; }
+.split.code-right { grid-template-columns: .9fr 1.4fr; }
+.findings > *, .two > *, .split > * { min-width: 0; }
+#cmds { font-size: 12.8px; }
+.howto p { margin: 0 0 12px; font-size: 15.5px; color: #3a4757; }
+.codebox .dots { display: inline-flex; gap: 6px; padding: 0 8px 8px 6px; }
+.codebox .dots i { width: 10px; height: 10px; border-radius: 50%; background: #2a3a52; display: block; }
+.codebox .ttl { font: 12.5px var(--mono); color: #6f8399; padding-bottom: 8px; }
+.codebox .bar2 { display: flex; align-items: center; gap: 4px; padding: 8px 8px 0; background: #0b1422; border-bottom: 1px solid #1c2b42; overflow-x: auto; }
+.codebox .ct { font: inherit; font-size: 13.5px; font-weight: 600; color: #8ea2b8; background: transparent; border: 0; padding: 8px 14px 10px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.codebox .ct.on { color: #fff; border-bottom-color: var(--orange); }
+.codebox .copy { margin-left: auto; font: inherit; font-size: 12.5px; color: #8ea2b8; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 4px 10px; cursor: pointer; margin-bottom: 6px; }
+.codebox pre { margin: 0; padding: 20px 22px; overflow-x: auto; font: 13.5px/1.7 var(--mono); }
+.codebox pre .c { color: #6f8399; }
+.codebox pre .k { color: #f0a35e; }
+.cite pre { background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 22px; overflow-x: auto; font: 13.5px/1.7 var(--mono); margin: 0; }
+
+footer { background: var(--ink); color: #93a5b8; font-size: 14px; padding: 36px 0; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: space-between; }
+
+.js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
+.js .reveal.in { opacity: 1; transform: none; }
+@media print { .js .reveal { opacity: 1; transform: none; } nav.top { position: static; } }
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal { opacity: 1; transform: none; transition: none; }
+  .ecg path { animation: none; stroke-dashoffset: 0; }
+  .ecg path.pulse { display: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 960px) {
+  .findings, .two, .split, .split.code-right { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stat:nth-child(4) { border-left: 0; }
+  .stat:nth-child(n+4) { border-top: 1px solid rgba(255,255,255,.08); }
+  .steps { grid-template-columns: 1fr 1fr; gap: 32px 0; }
+  .step:nth-child(2)::after { display: none; }
+  .measures { grid-template-columns: 1fr; }
+  .agents { grid-template-columns: 1fr 1fr; }
+  .types { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .wrap { padding: 0 16px; }
+  .hero { padding-top: 56px; }
+  .eyebrow { font-size: 11px; letter-spacing: .06em; padding: 4px 12px; margin-bottom: 20px; }
+  .eyebrow .opt { display: none; }
+  section { padding: 60px 0; }
+  .stats { grid-template-columns: repeat(2, 1fr); margin-top: 44px; }
+  .stat:nth-child(odd) { border-left: 0; }
+  .stat:nth-child(4) { border-left: 1px solid rgba(255,255,255,.08); }
+  .stat:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.08); }
+  .stat b { font-size: 28px; }
+  .hl { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .agents { grid-template-columns: 1fr; }
+  .step::after { display: none; }
+  .figure-card { padding: 14px; }
+  nav.top .brand { display: none; }
+  nav.top .links { margin-left: 0; }
+  .abstract { text-align: left; }
+  .bar .bg { width: 70px; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Benchmark<span class="opt"> · Autoresearch agents</span> · Clinical prediction</div>
+    <h1><span class="grad">Auto-MD</span>-bench</h1>
+    <p class="subtitle">Evaluating autoresearch agents for real-world medical tasks</p>
+    <p class="authors"><b>Anonymous authors</b> &nbsp;·&nbsp; <span style="white-space:nowrap">Paper under double-blind review</span></p>
+    <div class="btns">
+      <span class="btn off" title="Available after the review period">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>Paper</span>
+      <a class="btn primary" id="code-link" href="../README.md">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
+      <a class="btn" href="#tasks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>Tasks</a>
+      <a class="btn" href="#leaderboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 16v-5M12 16V8M17 16v-8"/></svg>Leaderboard</a>
+      <a class="btn" href="#citation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5H3v7h4c0 4-2 6-4 6zM14 21c3 0 7-1 7-8V5h-7v7h4c0 4-2 6-4 6z"/></svg>BibTeX</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>15</b><span>medical prediction tasks</span></div>
+      <div class="stat"><b>10</b><span>clinical datasets</span></div>
+      <div class="stat"><b>3</b><span>task types</span></div>
+      <div class="stat"><b>5</b><span>external-validation tasks</span></div>
+      <div class="stat"><b>4</b><span>autoresearch agents</span></div>
+      <div class="stat"><b>12 h</b><span>per run, offline</span></div>
+    </div>
+  </div>
+  <svg class="ecg" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="ecgGrad" x1="0" x2="1"><stop offset="0" stop-color="#4f86ad" stop-opacity=".2"/><stop offset=".5" stop-color="#f0a35e"/><stop offset="1" stop-color="#4f86ad" stop-opacity=".2"/></linearGradient></defs>
+    <path d="M0 45 H210 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H560 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H910 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H1260 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H1440"/>
+    <path class="pulse" d="M0 45 H210 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H560 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H910 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H1260 l12 -6 l10 6 h18 l8 10 l12 -48 l12 56 l9 -18 h24 l16 -8 l14 8 H1440"/>
+  </svg>
+</header>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="#">Auto-<span>MD</span>-bench</a>
+    <div class="links">
+      <a href="#overview">Overview</a>
+      <a href="#findings">Findings</a>
+      <a href="#tasks">Tasks</a>
+      <a href="#protocol">Protocol</a>
+      <a href="#leaderboard">Leaderboard</a>
+      <a href="#analysis">Analysis</a>
+      <a href="#related">Related</a>
+      <a href="#start">Get started</a>
+      <a href="#citation">Cite</a>
+    </div>
+    <a class="navbtn" id="code-link-2" href="../README.md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="overview">
+  <div class="wrap">
+    <figure class="figure-card reveal">
+      <a href="assets/overview.png" target="_blank" rel="noopener" class="zoom"><img src="assets/overview.png" alt="Overview of Auto-MD-bench: medical prediction tasks are given to autoresearch agents; the resulting models are evaluated on primary task performance, risk calibration and external validation, and the agents' code and development records are analyzed." width="2000" height="1032"></a>
+      <figcaption><b>Overview of Auto-MD-bench.</b> Agents develop medical prediction models under a stated primary objective. We evaluate primary task performance, risk calibration, and performance under population shift, and analyze code and development records to help explain performance differences.</figcaption>
+    </figure>
+    <div class="narrow" style="margin-top:72px">
+      <p class="kicker center">Abstract</p>
+      <p class="abstract">Autonomous agents are increasingly capable of developing machine-learning models end to end. In medical practice, however, strong performance on the target metric does not fully characterize how good the models are in real-world use cases. For example, medical AI models should also provide well-calibrated risk estimates and remain robust across patient populations. Yet autonomous model development is typically guided by task objectives such as AUROC. This raises a key question: how well do these objectives specify the medical AI models that agents ultimately build and how useful these models really are in healthcare? In this study, we introduce Auto-MD-bench, a benchmark of 15 real-world medical tasks from 10 clinical datasets, spanning survival analysis, classification and sequential prediction, with external validation across cohorts, hospitals and time periods. We evaluate four agents: AIDE, AI Scientist v2, Codex, and Autoresearch. The strongest agents achieve competitive primary scores, yet their predicted risks are substantially less well calibrated than those of the simple baseline models, which could lead to severe medical accidents. Moreover, models with nearly identical primary scores can exhibit markedly different calibration, while performance varies substantially across population shifts. These findings show that primary task performance alone is insufficient to assess autonomous clinical modeling and multiple different metrics widely used in healthcare practice need to be taken into consideration.</p>
+    </div>
+  </div>
+</section>
+
+<section id="findings" class="dark">
+  <div class="wrap">
+    <p class="kicker">Key findings</p>
+    <h2>Competitive scores, poorly calibrated risks</h2>
+    <p class="lead">Four autoresearch agents, the same LLM (Qwen3.8 Flash) and the same 12-hour budget on every task. The coding agents beat the simple baseline models on the primary metric, while their predicted risks are substantially less well calibrated.</p>
+    <div class="findings">
+      <div class="chart-card reveal">
+        <h3>Primary score vs. calibration error</h3>
+        <p class="sub">Mean over 15 tasks. Right is better on the score; lower is better on ECE.</p>
+        <svg id="scatter" viewBox="0 0 560 380" width="100%" role="img" aria-label="Scatter plot of mean normalized score against mean ECE for the four agents and the simple baseline models"></svg>
+      </div>
+      <div class="hl">
+        <div class="item reveal"><div class="num">0.518 <small>vs 0.487</small></div><p>Mean normalized score of Autoresearch (Codex: 0.517) against the simple baseline models. Each beats the baseline on 14 of 15 tasks.</p></div>
+        <div class="item reveal"><div class="num warn">≈3×</div><p>Calibration error of Codex and Autoresearch relative to the simple baseline models (mean ECE 0.075–0.086 vs 0.027).</p></div>
+        <div class="item reveal"><div class="num warn">75%</div><p>of the ECE gap comes from experiments that submit averaged ranks as probabilities; handling class imbalance without recalibration adds 18%.</p></div>
+        <div class="item reveal"><div class="num">0.172<small style="margin:0 4px">→</small>0.016</div><p>Mean ECE on UCI Diabetes when calibration is added to the stated AUROC objective, with similar AUROC.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tasks">
+  <div class="wrap">
+    <p class="kicker">Benchmark</p>
+    <h2>15 tasks from 10 clinical datasets</h2>
+    <p class="lead">Structured patient data and real clinical outcomes. Ten tasks use internal validation on test data from the source population; five use external validation on data from another cohort, hospital or time period.</p>
+    <div class="types">
+      <div class="type reveal">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4v16h18"/><path d="M6 6h4v4h3v3h3v3h4"/></svg></div>
+        <h3>Survival analysis <span>7</span></h3>
+        <p>Agents submit a survival curve for each patient. Primary metric: time-dependent concordance C<sup>td</sup>.</p>
+        <div class="tl"><span>SUPPORT</span><span>METABRIC</span><span>Rotterdam</span><span class="x">Rotterdam → GBSG</span><span>SEER</span><span class="x">SEER, later period</span><span>NHANES</span></div>
+      </div>
+      <div class="type reveal">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4v16h18"/><path d="M3 20C5 10 10 6.5 21 5"/><path d="M3 20 21 5" stroke-dasharray="2 3" opacity=".6"/></svg></div>
+        <h3>Classification <span>5</span></h3>
+        <p>Agents submit an event probability for each patient. Primary metric: AUROC; min(Se, PPV) for PhysioNet 2012.</p>
+        <div class="tl"><span>UCI Diabetes</span><span>PhysioNet 2012</span><span>MIMIC-IV</span><span>eICU</span><span class="x">eICU, new hospitals</span></div>
+      </div>
+      <div class="type reveal">
+        <div class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-5 4 10 3-7 2 2h5"/></svg></div>
+        <h3>Sequential prediction <span>3</span></h3>
+        <p>Agents submit a probability and an alarm for every patient-hour in the ICU. Primary metric: PhysioNet/CinC 2019 utility.</p>
+        <div class="tl"><span>Sepsis</span><span class="x">Sepsis, new hospital</span><span class="x">Sepsis, 500 local labels</span></div>
+      </div>
+    </div>
+    <p class="legend-line"><span><span class="tl-key"></span>Internal validation</span><span><span class="tl-key x"></span>External validation</span></p>
+    <details class="more" id="all-tasks">
+      <summary>Full task table: data sources, outcomes and sample sizes</summary>
+      <div class="chips" id="task-chips">
+        <button class="chip on" data-f="all">All 15</button>
+        <button class="chip" data-f="survival">Survival analysis · 7</button>
+        <button class="chip" data-f="binary">Classification · 5</button>
+        <button class="chip" data-f="sequential">Sequential prediction · 3</button>
+        <button class="chip" data-f="external">External validation · 5</button>
+      </div>
+      <div class="tbl-wrap">
+        <table id="task-table">
+          <thead><tr><th>Task</th><th>Data source</th><th>Outcome</th><th>Validation</th><th>Primary metric</th><th class="num">Train / test</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    <p class="note">Sizes are patients unless noted. Tasks sharing a data source share their test set (SEER pair, eICU pair, the two sepsis external tasks). C<sup>td</sup>: time-dependent concordance; Utility: PhysioNet/CinC 2019 challenge score. Data marked credentialed access or data agreement need an application to the data provider; all other tasks use public data.</p>
+    </details>
+  </div>
+</section>
+
+<section id="protocol" class="alt">
+  <div class="wrap">
+    <p class="kicker">Protocol</p>
+    <h2>How a run works</h2>
+    <p class="lead">Every agent gets the same task description and data, the same LLM, 12 hours of wall-clock time on its own machine (8 CPU threads, 16 GB RAM) and no internet access. Test labels never enter the agent's environment.</p>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg></div>
+        <h3>Task package</h3>
+        <p>A description with the prediction target, primary metric and rules; labeled training data; test features; null predictions in the submission format; a format checker.</p>
+      </div>
+      <div class="step reveal">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div>
+        <h3>Autonomous development</h3>
+        <p>The agent chooses its modeling approach, writes and runs code, validates on the training data and revises its models. It never sees test labels or test scores.</p>
+      </div>
+      <div class="step reveal">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <h3>Submission selection</h3>
+        <p>One prediction file per run, chosen by the agent's own rule: the final file for Codex and Autoresearch, the best self-reported node for AIDE and AI Scientist v2.</p>
+      </div>
+      <div class="step reveal">
+        <div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 5-6"/></svg></div>
+        <h3>Grading outside the sandbox</h3>
+        <p>The selected file is scored against the hidden labels. Missing, unreadable or malformed files make the run invalid and score 0.</p>
+      </div>
+    </div>
+    <h3 style="margin-top:56px">Four autoresearch agents</h3>
+    <div class="agents">
+      <div class="agent reveal" style="--c: var(--c-codex)">
+        <div class="an">Codex</div><div class="at">Coding agent</div>
+        <p>A general-purpose coding agent that plans and carries out the work itself.</p>
+        <dl><dt>Search</dt><dd>agent-directed</dd><dt>Graded</dt><dd>final <code class="code">submission.csv</code></dd></dl>
+      </div>
+      <div class="agent reveal" style="--c: var(--c-auto)">
+        <div class="an">Autoresearch</div><div class="at">Coding agent</div>
+        <p>Codex following the autoresearch protocol: build an initial model, then test one change at a time and keep changes that improve the validation metric.</p>
+        <dl><dt>Search</dt><dd>greedy search</dd><dt>Graded</dt><dd>final <code class="code">submission.csv</code></dd></dl>
+      </div>
+      <div class="agent reveal" style="--c: var(--c-aide)">
+        <div class="an">AIDE</div><div class="at">Research agent</div>
+        <p>Drafts, debugs and improves solutions as nodes of a search tree, expanding the best node so far.</p>
+        <dl><dt>Search</dt><dd>greedy tree search</dd><dt>Graded</dt><dd>best self-reported node</dd></dl>
+      </div>
+      <div class="agent reveal" style="--c: var(--c-ais)">
+        <div class="an">AI Scientist v2</div><div class="at">Research agent</div>
+        <p>Tree search in four stages: initial implementation, tuning, experimentation and ablation. Paper writing and review are disabled.</p>
+        <dl><dt>Search</dt><dd>best-first tree search</dd><dt>Graded</dt><dd>selected node of the latest stage</dd></dl>
+      </div>
+    </div>
+    <div class="measures">
+      <div class="measure"><h3>Primary task performance</h3><p>C<sup>td</sup> for survival, AUROC for classification (min(Se, PPV) for PhysioNet 2012), normalized challenge utility for sequential prediction. Normalized as <span class="formula">(m − m₀)/(1 − m₀)</span> against null predictions and averaged over tasks.</p></div>
+      <div class="measure o"><h3>Risk calibration</h3><p>Expected calibration error. For survival, predicted survival at three time points is compared with Kaplan–Meier estimates, which account for censoring; sequential tasks use patient-hours.</p></div>
+      <div class="measure o"><h3>Population shift</h3><p>Five external-validation tasks test on a different cohort, hospital or period. We report their scores and the ratio to the matching internal-validation task.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="leaderboard">
+  <div class="wrap">
+    <p class="kicker">Results</p>
+    <h2>Leaderboard</h2>
+    <p class="lead">Main experiment: Qwen3.8 Flash for all agents, three repetitions per task, 12 hours per run.</p>
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-p="p-overall">Overall</button>
+      <button class="tab" data-p="p-task">By task</button>
+      <button class="tab" data-p="p-shift">Population shift</button>
+      <button class="tab" data-p="p-llm">LLMs</button>
+    </div>
+
+    <div class="panel on" id="p-overall">
+      <div class="chips" id="pen-chips">
+        <button class="chip on" data-v="pen">Invalid runs score 0</button>
+        <button class="chip" data-v="non">Valid runs only</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>System</th><th class="num">Normalized score ↑</th><th class="num">Mean rank ↓</th><th class="num">ECE ↓</th><th class="num">Valid runs</th></tr></thead>
+          <tbody id="overall-body"></tbody>
+        </table>
+      </div>
+      <p class="note">Scores and valid-run rates: mean ± SD over three repetitions; with valid runs only, each task is first averaged over its valid runs. Mean rank: mean ± SD across the 15 tasks of each agent's rank among the four agents. ECE: mean over tasks of valid runs. The simple baseline models are fixed models (Cox neural network for survival, histogram gradient boosting otherwise), averaged over five fits.</p>
+    </div>
+
+    <div class="panel" id="p-task">
+      <div class="chips" id="metric-chips">
+        <button class="chip on" data-m="score">Normalized score ↑</button>
+        <button class="chip" data-m="ece">ECE ↓</button>
+      </div>
+      <div class="tbl-wrap">
+        <table class="heat" id="task-heat"><thead></thead><tbody></tbody></table>
+      </div>
+      <p class="note" id="heat-note"></p>
+    </div>
+
+    <div class="panel" id="p-shift">
+      <div class="tbl-wrap">
+        <table id="shift-table"><thead></thead><tbody></tbody></table>
+      </div>
+      <p class="note">Mean normalized scores; the badge is the ratio to the matching task without population shift (green: 95% or more; amber: 75–94%; orange: below 75%). <sup>*</sup> one valid run.</p>
+    </div>
+
+    <div class="panel" id="p-llm">
+      <div class="tbl-wrap" style="max-width:720px">
+        <table>
+          <thead><tr><th>Codex with</th><th class="num">Normalized score ↑</th><th class="num">ECE ↓</th></tr></thead>
+          <tbody>
+            <tr><td><div class="sys">Qwen3.8 Flash</div></td><td class="num">0.517 <span class="pm">± 0.003</span></td><td class="num">0.086</td></tr>
+            <tr><td><div class="sys">gpt-6-luna</div></td><td class="num">0.517 <span class="pm">± 0.004</span></td><td class="num">0.041</td></tr>
+            <tr><td><div class="sys">Gemini 3.8 Flash</div></td><td class="num best">0.520 <span class="pm">± 0.006</span></td><td class="num best">0.029</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">All 15 tasks, three repetitions each, same data and 12-hour budget. Similar primary scores, markedly different calibration.</p>
+    </div>
+  </div>
+</section>
+
+<section id="analysis" class="alt">
+  <div class="wrap">
+    <p class="kicker">Analysis</p>
+    <h2>Where the calibration gap comes from</h2>
+    <p class="lead">We read the code behind every valid submission. Two modeling practices account for most of the agents' excess calibration error.</p>
+    <figure class="figure-card reveal">
+      <a href="assets/calibration_gap.png" target="_blank" rel="noopener" class="zoom"><img src="assets/calibration_gap.png" alt="(a) Contributions to the ECE gap: averaged ranks as probabilities 75%, imbalance handling without recalibration 18%, other experiments 7%. (b) ECE after imbalance handling: 0.160 without recalibration, 0.008 with recalibration." width="2100" height="750" loading="lazy"></a>
+      <figcaption><b>Calibration error and modeling practices.</b> (a) Contributions to the ECE gap relative to task-specific simple baseline models. (b) ECE after agents handle class imbalance, with or without recalibration. Circles show individual experiments; diamonds show group means.</figcaption>
+    </figure>
+    <div class="two" style="margin-top:48px">
+      <div class="prose">
+        <h3>Averaged ranks are not probabilities</h3>
+        <p>Experiments that submit averaged ranks as probabilities account for 75% of the ECE difference from the simple baseline models while making up 14% of valid experiments. Averaged ranks express relative ordering rather than event probabilities.</p>
+        <h3 style="margin-top:22px">Reweighting without recalibration</h3>
+        <p>Handling class imbalance changes the relative weight of events and non-events during training and can distort the resulting probabilities. Among experiments that do this without averaged ranks, mean ECE is 0.160 without recalibration and 0.008 with it.</p>
+      </div>
+      <div>
+        <h3>Stating calibration in the objective</h3>
+        <p class="note" style="margin:0 0 12px">UCI Diabetes, four agents × three repetitions per objective, same LLM, data and budget.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Stated objective</th><th class="num">AUROC ↑</th><th class="num">ECE ↓</th></tr></thead>
+            <tbody>
+              <tr><td>AUROC (main experiment)</td><td class="num">0.676 <span class="pm">± 0.023</span></td><td class="num">0.172 <span class="pm">± 0.211</span></td></tr>
+              <tr><td>Brier score</td><td class="num">0.640 <span class="pm">± 0.107</span></td><td class="num">0.061 <span class="pm">± 0.157</span></td></tr>
+              <tr><td>AUROC and ECE</td><td class="num best">0.683 <span class="pm">± 0.016</span></td><td class="num best">0.016 <span class="pm">± 0.023</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:96px">How agents build their models</h2>
+    <p class="lead">Gradient-boosted trees dominate. The agents differ more in how they combine and validate models, and probability calibration is uncommon for all four.</p>
+    <div class="tbl-wrap">
+      <table id="methods-table">
+        <thead><tr><th>Method (share of valid experiments)</th><th class="num">AIDE</th><th class="num">Codex</th><th class="num">Autoresearch</th><th class="num">AI Scientist v2</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">Mean ± SD over three repetitions; categories can overlap. Code review also found errors in handling censored outcomes in 8 of 79 valid survival submissions, all of which still beat their task's simple baseline score.</p>
+    <figure class="figure-card reveal" style="margin-top:40px">
+      <a href="assets/modeling_changes.png" target="_blank" rel="noopener" class="zoom"><img src="assets/modeling_changes.png" alt="Share of sampled solution pairs with ensembling, hyperparameter tuning and feature engineering changes, early, middle and late in the search, for each agent." width="2025" height="584" loading="lazy"></a>
+      <figcaption><b>Modeling changes during agent search.</b> Points show the percentage of sampled solution pairs containing each type of modeling change. Early, middle, and late indicate relative positions in the chronologically ordered sequence of solution pairs within each run, rather than equal intervals of elapsed time. Pairs may contain multiple types of change.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="related">
+  <div class="wrap">
+    <p class="kicker">Related benchmarks</p>
+    <h2>Evaluation for medical use</h2>
+    <p class="lead">Agent benchmarks for machine learning and biomedicine rarely assess risk calibration or external validation, and none of these assesses both.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Benchmark</th><th>Domain</th><th class="num">Tasks</th><th style="text-align:center">Calibration</th><th style="text-align:center">External validation</th></tr></thead>
+        <tbody id="compare-body"></tbody>
+      </table>
+    </div>
+    <p class="note">✓ reported; – not reported. Calibration: explicit assessment of probability calibration. External validation: a distinct cohort, site or time period. MedAgentGym counts task categories.</p>
+  </div>
+</section>
+
+<section id="start" class="alt">
+  <div class="wrap split code-right">
+    <div>
+      <p class="kicker">Get started</p>
+      <h2>Build, run and grade in a few commands</h2>
+      <p class="lead">The ten public tasks build with one script. MIMIC-IV, eICU-CRD and SEER need their own data agreements; the repository lists the steps to get access.</p>
+      <div class="howto">
+        <p><b>Grade any prediction file.</b> The grader reads only the submission and the hidden labels; it never runs agent code.</p>
+        <p><b>Bring your own agent.</b> Any shell command that leaves <code class="formula">submission.csv</code> in its sandbox can be evaluated. Run scripts and patches for the four agents in the paper are included.</p>
+      </div>
+    </div>
+    <div class="codebox">
+      <div class="bar2"><span class="dots"><i></i><i></i><i></i></span><span class="ttl">terminal</span><button class="copy" id="copy">Copy</button></div>
+<pre id="cmds"><span class="c"># install (Python 3.10 or later)</span>
+pip install -e .
+
+<span class="c"># download and build the 10 public tasks</span>
+bash scripts/download_public_data.sh data/raw
+bash scripts/build_public_tasks.sh data/raw packages
+
+<span class="c"># grade a submission</span>
+python -m automdbench.grade support \
+    packages/support/public/sample_submission.csv
+
+<span class="c"># run an agent for 12 hours, then grade its submission</span>
+python -m automdbench.run support --budget-min 720 \
+    --agent "bash $PWD/agents/codex/run.sh $PWD/agents/codex/prompt.txt" \
+    --run-dir runs/codex/support_1</pre>
+    </div>
+  </div>
+</section>
+
+<section id="citation">
+  <div class="wrap narrow cite">
+    <p class="kicker">Citation</p>
+    <h2>BibTeX</h2>
+<pre>@misc{automdbench2026,
+  title  = {Auto-MD-bench: Evaluating autoresearch agents for real-world medical tasks},
+  author = {Anonymous Authors},
+  year   = {2026},
+  note   = {Under review}
+}</pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Auto-MD-bench · anonymous submission</span>
+    <span>Code: MIT license · Datasets keep their own licenses and terms of use</span>
+  </div>
+</footer>
+
+<script>
+document.documentElement.className += " js";
+(function () {
+  "use strict";
+  var AG = ["AIDE", "Codex", "Autoresearch", "AI Scientist v2"];
+  var COL = { "AIDE": "var(--c-aide)", "Codex": "var(--c-codex)", "Autoresearch": "var(--c-auto)", "AI Scientist v2": "var(--c-ais)" };
+  var HEX = { "AIDE": "#c9962c", "Codex": "#2f5d7c", "Autoresearch": "#3f8f7c", "AI Scientist v2": "#8a6bb5" };
+
+  // Tasks (paper Table: the 15 tasks).
+  var TASKS = [
+    ["SUPPORT", "support", "survival", "Cohort", "Death", "Internal", "C<sup>td</sup>", "7,098 / 1,775", "pub"],
+    ["METABRIC", "metabric", "survival", "Cohort", "Death", "Internal", "C<sup>td</sup>", "1,523 / 381", "pub"],
+    ["Rotterdam", "rotterdam", "survival", "Cohort", "Recurrence or death", "Internal", "C<sup>td</sup>", "2,385 / 597", "pub"],
+    ["Rotterdam → GBSG", "rotterdam_gbsg", "survival", "Cohort → trial", "Recurrence or death", "External (cohort)", "C<sup>td</sup>", "2,982 / 686", "pub"],
+    ["SEER", "seer", "survival", "Registry", "Breast-cancer death", "Internal", "C<sup>td</sup>", "232,625 / 49,291", "dua"],
+    ["SEER, later period", "seer_later_period", "survival", "Registry", "Breast-cancer death", "External (period)", "C<sup>td</sup>", "183,334 / 49,291", "dua"],
+    ["NHANES", "nhanes", "survival", "Survey", "Death", "Internal", "C<sup>td</sup>", "11,639 / 2,910", "pub"],
+    ["UCI Diabetes", "uci_diabetes", "binary", "EHR", "30-day readmission", "Internal", "AUROC", "81,347 / 20,419 encounters", "pub"],
+    ["PhysioNet 2012", "physionet2012", "binary", "EHR (ICU)", "In-hospital death", "Internal", "min(Se, PPV)", "4,000 / 8,000 stays", "pub"],
+    ["MIMIC-IV", "mimiciv", "binary", "EHR (ICU)", "In-hospital death", "Internal", "AUROC", "41,471 / 10,368", "cred"],
+    ["eICU", "eicu", "binary", "EHR (ICU)", "In-hospital death", "Internal", "AUROC", "94,823 / 11,133 stays", "cred"],
+    ["eICU, new hospitals", "eicu_new_hospitals", "binary", "EHR (ICU)", "In-hospital death", "External (hospital)", "AUROC", "83,626 / 11,133 stays", "cred"],
+    ["Sepsis", "sepsis", "sequential", "EHR (ICU)", "Sepsis onset", "Internal", "Utility", "32,268 / 8,068", "pub"],
+    ["Sepsis, new hospital", "sepsis_new_hospital", "sequential", "EHR (ICU)", "Sepsis onset", "External (hospital)", "Utility", "20,336 / 4,000", "pub"],
+    ["Sepsis, 500 local labels", "sepsis_500_labels", "sequential", "EHR (ICU)", "Sepsis onset", "External (hospital)", "Utility", "20,336 + 500 / 4,000", "pub"]
+  ];
+  var GROUPS = { survival: "Survival analysis", binary: "Classification", sequential: "Sequential prediction" };
+  var ACCESS = { pub: ["pub", "Public"], cred: ["cred", "Credentialed access"], dua: ["cred", "Data agreement"] };
+
+  // Per-task results (paper appendix tables; generated from results/runs.csv and results/reference.csv).
+  var D = {"score":{"support":{"ref":0.243,"AIDE":[0.279,0.02],"Codex":[0.303,0.001],"Autoresearch":[0.312,0.011],"AI Scientist v2":[0.261,0.026]},"metabric":{"ref":0.284,"AIDE":[0.316,0.008],"Codex":[0.318,0.015],"Autoresearch":[0.353,0.015],"AI Scientist v2":[0.196,0.171]},"rotterdam":{"ref":0.371,"AIDE":[0.353,0.043],"Codex":[0.388,0.005],"Autoresearch":[0.384,0.008],"AI Scientist v2":[0.388,0.004]},"rotterdam_gbsg":{"ref":0.372,"AIDE":[0.306,0.056],"Codex":[0.385,0.013],"Autoresearch":[0.371,0.042],"AI Scientist v2":[0.332,0.046]},"seer":{"ref":0.729,"AIDE":[0.499,0.432],"Codex":[0.723,0.038],"Autoresearch":[0.741,0.007],"AI Scientist v2":[0.481,0.417]},"seer_later_period":{"ref":0.724,"AIDE":[0.73,0.027],"Codex":[0.745,0.003],"Autoresearch":[0.735,0.021],"AI Scientist v2":[0.223,0.387]},"nhanes":{"ref":0.67,"AIDE":[0.716,0.005],"Codex":[0.727,0.013],"Autoresearch":[0.721,0.001],"AI Scientist v2":[0.47,0.407]},"uci_diabetes":{"ref":0.337,"AIDE":[0.317,0.084],"Codex":[0.363,0.021],"Autoresearch":[0.375,0.004],"AI Scientist v2":[0.236,0.205]},"physionet2012":{"ref":0.497,"AIDE":[0.512,0.034],"Codex":[0.532,0.022],"Autoresearch":[0.538,0.005],"AI Scientist v2":[0.524,0.01]},"mimiciv":{"ref":0.768,"AIDE":[0.786,0.001],"Codex":[0.786,0.002],"Autoresearch":[0.785,0.001],"AI Scientist v2":[0.779,0.006]},"eicu":{"ref":0.742,"AIDE":[0.753,0.001],"Codex":[0.753,0.002],"Autoresearch":[0.747,0.013],"AI Scientist v2":[0.495,0.428]},"eicu_new_hospitals":{"ref":0.736,"AIDE":[0.748,0.001],"Codex":[0.751,0.001],"Autoresearch":[0.751,0.0],"AI Scientist v2":[0.705,0.066]},"sepsis":{"ref":0.381,"AIDE":[0.415,0.036],"Codex":[0.446,0.017],"Autoresearch":[0.44,0.009],"AI Scientist v2":[0.121,0.209]},"sepsis_new_hospital":{"ref":0.199,"AIDE":[0.168,0.146],"Codex":[0.231,0.021],"Autoresearch":[0.268,0.02],"AI Scientist v2":[0.076,0.132]},"sepsis_500_labels":{"ref":0.248,"AIDE":[0.217,0.102],"Codex":[0.299,0.031],"Autoresearch":[0.253,0.056],"AI Scientist v2":[0.041,0.072]}},"ece":{"support":{"ref":0.032,"AIDE":[0.049,0.027,3],"Codex":[0.035,0.008,3],"Autoresearch":[0.044,0.013,3],"AI Scientist v2":[0.057,0.036,3]},"metabric":{"ref":0.054,"AIDE":[0.048,0.003,3],"Codex":[0.132,0.152,3],"Autoresearch":[0.081,0.033,3],"AI Scientist v2":[0.053,0.001,2]},"rotterdam":{"ref":0.042,"AIDE":[0.059,0.045,3],"Codex":[0.042,0.011,3],"Autoresearch":[0.055,0.027,3],"AI Scientist v2":[0.082,0.05,3]},"rotterdam_gbsg":{"ref":0.039,"AIDE":[0.112,0.096,3],"Codex":[0.04,0.001,3],"Autoresearch":[0.16,0.17,3],"AI Scientist v2":[0.103,0.111,3]},"seer":{"ref":0.006,"AIDE":[0.027,0.04,3],"Codex":[0.015,0.01,3],"Autoresearch":[0.016,0.011,3],"AI Scientist v2":[0.008,0.005,2]},"seer_later_period":{"ref":0.007,"AIDE":[0.008,0.005,3],"Codex":[0.253,0.21,3],"Autoresearch":[0.005,0.001,3],"AI Scientist v2":[0.013,null,1]},"nhanes":{"ref":0.011,"AIDE":[0.011,0.003,3],"Codex":[0.016,0.01,3],"Autoresearch":[0.064,0.019,3],"AI Scientist v2":[0.022,0.0,2]},"uci_diabetes":{"ref":0.008,"AIDE":[0.44,0.09,3],"Codex":[0.133,0.221,3],"Autoresearch":[0.005,0.001,3],"AI Scientist v2":[0.079,0.106,2]},"physionet2012":{"ref":0.096,"AIDE":[0.153,0.18,3],"Codex":[0.015,0.012,3],"Autoresearch":[0.009,0.001,3],"AI Scientist v2":[0.051,0.03,3]},"mimiciv":{"ref":0.02,"AIDE":[0.27,0.214,3],"Codex":[0.137,0.222,3],"Autoresearch":[0.137,0.222,3],"AI Scientist v2":[0.146,0.215,3]},"eicu":{"ref":0.013,"AIDE":[0.269,0.224,3],"Codex":[0.14,0.224,3],"Autoresearch":[0.271,0.222,3],"AI Scientist v2":[0.015,0.003,2]},"eicu_new_hospitals":{"ref":0.016,"AIDE":[0.271,0.222,3],"Codex":[0.141,0.223,3],"Autoresearch":[0.013,0.002,3],"AI Scientist v2":[0.219,0.192,3]},"sepsis":{"ref":0.014,"AIDE":[0.003,0.002,3],"Codex":[0.004,0.005,3],"Autoresearch":[0.166,0.284,3],"AI Scientist v2":[0.215,0.075,2]},"sepsis_new_hospital":{"ref":0.021,"AIDE":[0.025,0.036,3],"Codex":[0.023,0.028,3],"Autoresearch":[0.096,0.097,3],"AI Scientist v2":[0.002,null,1]},"sepsis_500_labels":{"ref":0.02,"AIDE":[0.171,0.142,3],"Codex":[0.167,0.276,3],"Autoresearch":[0.009,0.004,3],"AI Scientist v2":[0.016,null,1]}}};
+
+  function el(tag, html, cls) { var e = document.createElement(tag); if (html != null) e.innerHTML = html; if (cls) e.className = cls; return e; }
+
+  // ---- task table with filters
+  function renderTasks(f) {
+    var tb = document.querySelector("#task-table tbody"); tb.innerHTML = "";
+    var last = null;
+    TASKS.forEach(function (t) {
+      var ext = t[5].indexOf("External") === 0;
+      if (f === "external" ? !ext : (f !== "all" && t[2] !== f)) return;
+      if (f !== "external" && t[2] !== last) { last = t[2]; var g = el("tr", "<td colspan=6>" + GROUPS[t[2]] + "</td>", "group"); tb.appendChild(g); }
+      var a = ACCESS[t[8]];
+      tb.appendChild(el("tr",
+        "<td><b>" + t[0] + "</b><br><span class=code>" + t[1] + "</span></td><td>" + t[3] + (t[8] !== "pub" ? "<br><span class='tag cred'>" + a[1] + "</span>" : "") + "</td><td>" + t[4] + "</td>" +
+        "<td><span class='tag " + (ext ? "ext" : "int") + "'>" + t[5] + "</span></td><td>" + t[6] + "</td>" +
+        "<td class=num>" + t[7].replace(/ (encounters|stays)$/, "<br><span class=pm>$1</span>") + "</td>"));
+    });
+  }
+  renderTasks("all");
+  document.querySelectorAll("#task-chips .chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("#task-chips .chip").forEach(function (x) { x.classList.toggle("on", x === b); });
+      renderTasks(b.dataset.f);
+    });
+  });
+
+  // ---- overall leaderboard (paper main table and ECE table); two ways to treat invalid runs
+  var OVERALL = [
+    { n: "Autoresearch", type: "coding agent", pen: [0.518, 0.006, "1.80", "0.77"], non: [0.518, 0.006, "1.80", "0.77"], e: 0.075, v: "100.0%" },
+    { n: "Codex", type: "coding agent", pen: [0.517, 0.003, "1.60", "0.51"], non: [0.517, 0.003, "1.60", "0.51"], e: 0.086, v: "100.0%" },
+    { n: "Simple baseline models", ref: true, pen: [0.487], non: [0.487], e: 0.027 },
+    { n: "AIDE", type: "research agent", pen: [0.474, 0.032, "2.93", "0.88"], non: [0.474, 0.032, "3.13", "0.99"], e: 0.128, v: "100.0%" },
+    { n: "AI Scientist v2", type: "research agent", pen: [0.355, 0.064, "3.67", "0.82"], non: [0.467, null, "3.47", "0.83"], e: 0.072, v: "73.3% <span class=pm>± 13.3%</span>" }
+  ];
+  function renderOverall(mode) {
+    var ob = document.getElementById("overall-body"), k = 0;
+    ob.innerHTML = "";
+    var rows = OVERALL.slice().sort(function (a, b) { return b[mode][0] - a[mode][0]; });
+    var bestS = Math.max.apply(null, rows.map(function (o) { return o[mode][0]; }));
+    var bestR = Math.min.apply(null, rows.filter(function (o) { return !o.ref; }).map(function (o) { return +o[mode][2]; }));
+    rows.forEach(function (o) {
+      var x = o[mode], rank = o.ref ? "" : String(++k);
+      var sw = o.ref ? "<span class=sw style='background:#17212e;transform:rotate(45deg);width:9px;height:9px;border-radius:1px'></span>" : "<span class=sw style='background:" + COL[o.n] + "'></span>";
+      ob.appendChild(el("tr",
+        "<td class=pm>" + rank + "</td>" +
+        "<td><div class=sys>" + sw + o.n + (o.type ? " <small>" + o.type + "</small>" : "") + "</div></td>" +
+        "<td class=num><span class=bar><span><span class=" + (x[0] === bestS ? "best" : "") + ">" + x[0].toFixed(3) + "</span>" + (x[1] ? " <span class=pm>± " + x[1].toFixed(3) + "</span>" : "") + "</span><span class=bg><i style='width:" + (x[0] / 0.6 * 100) + "%'></i></span></span></td>" +
+        "<td class=num>" + (o.ref ? "–" : "<span class=" + (+x[2] === bestR ? "best" : "") + ">" + x[2] + "</span> <span class=pm>± " + x[3] + "</span>") + "</td>" +
+        "<td class=num><span class=bar><span class=" + (o.ref ? "best" : "") + ">" + o.e.toFixed(3) + "</span><span class=bg><i class=o style='width:" + (o.e / 0.14 * 100) + "%'></i></span></span></td>" +
+        "<td class=num>" + (o.v || "–") + "</td>", o.ref ? "ref-row" : ""));
+    });
+  }
+  renderOverall("pen");
+  document.querySelectorAll("#pen-chips .chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("#pen-chips .chip").forEach(function (x) { x.classList.toggle("on", x === b); });
+      renderOverall(b.dataset.v);
+    });
+  });
+
+  // ---- per-task heat table
+  function renderHeat(m) {
+    var t = document.getElementById("task-heat");
+    t.querySelector("thead").innerHTML = "<tr><th>Task</th><th class=num>Simple baseline</th>" + AG.map(function (a) { return "<th class=num><span class=sw style='display:inline-block;margin-right:6px;background:" + COL[a] + "'></span>" + a + "</th>"; }).join("") + "</tr>";
+    var tb = t.querySelector("tbody"); tb.innerHTML = ""; var last = null;
+    TASKS.forEach(function (tk) {
+      if (tk[2] !== last) { last = tk[2]; tb.appendChild(el("tr", "<td colspan=6>" + GROUPS[tk[2]] + "</td>", "group")); }
+      var row = D[m][tk[1]], vals = AG.map(function (a) { return row[a] ? row[a][0] : null; });
+      var all = vals.concat([row.ref]).filter(function (v) { return v != null; });
+      var best = m === "score" ? Math.max.apply(null, all) : Math.min.apply(null, all);
+      var html = "<td><b>" + tk[0] + "</b></td>";
+      function cell(v, sd, n, isRef) {
+        if (v == null) return "<td class=cell>–</td>";
+        var bg;
+        if (m === "score") { var d = v - row.ref; bg = d >= 0 ? "rgba(63,143,124," + Math.min(.55, d * 4 + .06) + ")" : "rgba(217,119,43," + Math.min(.55, -d * 2.2 + .06) + ")"; }
+        else { bg = "rgba(217,119,43," + Math.min(.6, v * 2.2) + ")"; }
+        if (isRef) bg = "transparent";
+        var mark = n && n < 3 ? (n === 2 ? "<sup>†</sup>" : "<sup>‡</sup>") : "";
+        return "<td class=cell style='background:" + bg + "'><span class=" + (v === best ? "best" : "") + ">" + v.toFixed(3) + mark + "</span>" + (sd != null ? "<span class=pm>± " + sd.toFixed(3) + "</span>" : "") + "</td>";
+      }
+      html += cell(row.ref, null, null, true);
+      AG.forEach(function (a) { var x = row[a]; html += x ? cell(x[0], x[1], x[2]) : cell(null); });
+      tb.appendChild(el("tr", html));
+    });
+    document.getElementById("heat-note").innerHTML = m === "score"
+      ? "Mean ± SD over three repetitions; invalid runs score 0. Green: above the simple baseline models; orange: below. Bold: best per task."
+      : "Mean ± SD over valid runs. Darker orange: larger calibration error. Bold: best per task. <sup>†</sup> two valid runs; <sup>‡</sup> one valid run.";
+  }
+  renderHeat("score");
+  document.querySelectorAll("#metric-chips .chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("#metric-chips .chip").forEach(function (x) { x.classList.toggle("on", x === b); });
+      renderHeat(b.dataset.m);
+    });
+  });
+
+  // ---- population shift (paper table: performance under population shift)
+  var SHIFT = [
+    ["Rotterdam → GBSG", "cohort", [0.372, 100], [0.306, 86], [0.385, 99], [0.371, 97], [0.332, 85]],
+    ["SEER, later period", "period", [0.724, 99], [0.730, 97], [0.745, 103], [0.735, 99], [0.670, null, 1]],
+    ["eICU, new hospitals", "hospital", [0.736, 99], [0.748, 99], [0.751, 100], [0.751, 100], [0.705, 100]],
+    ["Sepsis, new hospital", "hospital", [0.199, 52], [0.168, 41], [0.231, 52], [0.268, 61], [0.228, 63, 1]],
+    ["Sepsis, 500 local labels", "hospital", [0.248, 65], [0.217, 54], [0.299, 67], [0.253, 57], [0.124, 34, 1]]
+  ];
+  (function () {
+    var t = document.getElementById("shift-table");
+    t.querySelector("thead").innerHTML = "<tr><th>External validation</th><th class=num>Simple baseline</th>" + AG.map(function (a) { return "<th class=num>" + a + "</th>"; }).join("") + "</tr>";
+    var tb = t.querySelector("tbody");
+    SHIFT.forEach(function (s) {
+      var scores = s.slice(2).map(function (x) { return x[0]; }), best = Math.max.apply(null, scores.slice(1));
+      var html = "<td><b>" + s[0] + "</b><br><span class=code>new " + s[1] + "</span></td>";
+      s.slice(2).forEach(function (x, i) {
+        var r = x[1], c = r == null ? "#eef1f5" : r >= 95 ? "var(--green-soft)" : r >= 75 ? "#fdf6e3" : "var(--orange-soft)";
+        var fc = r == null ? "var(--faint)" : r >= 95 ? "var(--green)" : r >= 75 ? "#a77a12" : "#b65f1c";
+        html += "<td class=num><span class=" + (i > 0 && x[0] === best ? "best" : "") + ">" + x[0].toFixed(3) + (x[2] ? "<sup>*</sup>" : "") + "</span><span class=ratio style='background:" + c + ";color:" + fc + "'>" + (r == null ? "–" : r + "%") + "</span></td>";
+      });
+      tb.appendChild(el("tr", html));
+    });
+  })();
+
+  // ---- methods (paper table: modeling methods)
+  var METHODS = [
+    ["Model family"],
+    ["Gradient-boosted trees", [87, 0], [89, 8], [89, 8], [76, 13]],
+    ["Neural networks", [11, 8], [31, 17], [38, 10], [36, 10]],
+    ["Ensembling and validation"],
+    ["Averaging across seeds or folds", [62, 14], [89, 4], [89, 10], [31, 7]],
+    ["Single model only", [13, 12], [2, 4], [4, 8], [36, 10]],
+    ["Single hold-out split only", [9, 4], [4, 4], [13, 7], [37, 16]],
+    ["Calibration"],
+    ["Probability calibration", [2, 4], [22, 10], [22, 8], [14, 12]]
+  ];
+  var mb = document.querySelector("#methods-table tbody");
+  METHODS.forEach(function (m) {
+    if (m.length === 1) { mb.appendChild(el("tr", "<td colspan=5>" + m[0] + "</td>", "group")); return; }
+    var html = "<td>" + m[0] + "</td>";
+    m.slice(1).forEach(function (x, i) {
+      html += "<td class=num><span class=bar><span>" + x[0] + "% <span class=pm>± " + x[1] + "%</span></span><span class=bg style='width:64px'><i style='width:" + x[0] + "%;background:" + COL[AG[i]] + "'></i></span></span></td>";
+    });
+    mb.appendChild(el("tr", html));
+  });
+
+  // ---- related benchmarks (paper comparison table)
+  var CMP = [
+    ["MLE-bench", "General ML (Kaggle)", "75", 0, 0], ["HealthAgentBench", "Healthcare workflows", "54", 0, 0],
+    ["MedAgentBoard", "Diverse medical tasks", "100", 0, 0], ["MedAgentGym", "Biomedical data science", "129", 0, 0],
+    ["AutoHealth", "Health prediction", "17", 1, 0], ["ACP-Bench", "Computational pathology", "41", 1, 0],
+    ["BioML-bench", "Biomedical ML", "24", 0, 0], ["BioXArena", "Biomedical ML", "76", 0, 1],
+    ["Auto-MD-bench (ours)", "Clinical prediction", "15", 1, 1]
+  ];
+  var cb = document.getElementById("compare-body");
+  CMP.forEach(function (c, i) {
+    var mk = function (v) { return "<td style='text-align:center;font-size:17px;color:" + (v ? "var(--green)" : "#b7c0cb") + "'>" + (v ? "✓" : "–") + "</td>"; };
+    var tr = el("tr", "<td>" + (i === CMP.length - 1 ? "<b>" + c[0] + "</b>" : c[0]) + "</td><td>" + c[1] + "</td><td class=num>" + c[2] + "</td>" + mk(c[3]) + mk(c[4]));
+    if (i === CMP.length - 1) tr.style.background = "var(--orange-soft)";
+    cb.appendChild(tr);
+  });
+
+  // ---- scatter: mean normalized score vs mean ECE (paper main table and ECE table)
+  function drawScatter() {
+    var svg = document.getElementById("scatter"), NS = "http://www.w3.org/2000/svg";
+    var narrow = svg.parentNode.clientWidth < 460;
+    var W = narrow ? 380 : 560, H = narrow ? 330 : 380, L = narrow ? 46 : 58, R = 14, T = 14, B = 46;
+    var fs = narrow ? 12 : 13.5;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.innerHTML = "";
+    var x0 = 0.32, x1 = 0.56, y0 = 0, y1 = 0.14;
+    function X(v) { return L + (v - x0) / (x1 - x0) * (W - L - R); }
+    function Y(v) { return T + (1 - (v - y0) / (y1 - y0)) * (H - T - B); }
+    function add(tag, attrs, text) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; }
+    add("rect", { x: X(0.487), y: T, width: X(x1) - X(0.487), height: Y(0.027) - T, fill: "#fcf0e5" });
+    for (var gx = 0.35; gx <= 0.551; gx += 0.05) { add("line", { x1: X(gx), x2: X(gx), y1: T, y2: H - B, stroke: "#eef1f5" }); add("text", { x: X(gx), y: H - B + 18, "text-anchor": "middle", "font-size": 11.5, fill: "#8a97a6" }, gx.toFixed(2)); }
+    for (var gy = 0; gy <= 0.141; gy += 0.02) { add("line", { x1: L, x2: W - R, y1: Y(gy), y2: Y(gy), stroke: "#eef1f5" }); add("text", { x: L - 8, y: Y(gy) + 4, "text-anchor": "end", "font-size": 11.5, fill: "#8a97a6" }, gy.toFixed(2)); }
+    add("text", { x: (L + W - R) / 2, y: H - 8, "text-anchor": "middle", "font-size": 12.5, fill: "#5a6878", "font-weight": 600 }, "Mean normalized score →");
+    add("text", { x: 13, y: (T + H - B) / 2, "text-anchor": "middle", "font-size": 12.5, fill: "#5a6878", "font-weight": 600, transform: "rotate(-90 13 " + (T + H - B) / 2 + ")" }, "← Mean ECE");
+    add("line", { x1: X(0.487), x2: X(0.487), y1: T, y2: H - B, stroke: "#17212e", "stroke-dasharray": "3 4", opacity: .45 });
+    add("line", { x1: L, x2: W - R, y1: Y(0.027), y2: Y(0.027), stroke: "#17212e", "stroke-dasharray": "3 4", opacity: .45 });
+    add("text", { x: W - R - 6, y: T + 16, "text-anchor": "end", "font-size": 11.5, "font-weight": 700, fill: "#b65f1c" }, "Higher score,");
+    add("text", { x: W - R - 6, y: T + 30, "text-anchor": "end", "font-size": 11.5, "font-weight": 700, fill: "#b65f1c" }, "larger ECE");
+    var P = [["AIDE", 0.474, 0.128, -14, 5, "end"], ["Codex", 0.517, 0.086, -14, 5, "end"], ["Autoresearch", 0.518, 0.075, -14, 5, "end"], ["AI Scientist v2", 0.355, 0.072, 14, 5, "start"]];
+    P.forEach(function (p) {
+      add("circle", { cx: X(p[1]), cy: Y(p[2]), r: narrow ? 7 : 8.5, fill: HEX[p[0]], stroke: "#fff", "stroke-width": 2.5 });
+      add("text", { x: X(p[1]) + p[3], y: Y(p[2]) + p[4], "text-anchor": p[5], "font-size": fs, "font-weight": 700, fill: "#17212e" }, p[0]);
+    });
+    var bx = X(0.487), by = Y(0.027);
+    add("rect", { x: bx - 7, y: by - 7, width: 14, height: 14, fill: "#17212e", stroke: "#fff", "stroke-width": 2.5, transform: "rotate(45 " + bx + " " + by + ")" });
+    add("text", { x: bx - 14, y: by + 20, "text-anchor": "end", "font-size": fs, "font-weight": 700, fill: "#17212e" }, "Simple baseline models");
+  }
+  drawScatter();
+  var lastW = window.innerWidth;
+  window.addEventListener("resize", function () { if (Math.abs(window.innerWidth - lastW) > 40) { lastW = window.innerWidth; drawScatter(); } });
+
+  // ---- tabs, code tabs, copy, reveal, nav highlight, code link
+  function openTab(id) {
+    document.querySelectorAll(".tab").forEach(function (x) { x.classList.toggle("on", x.dataset.p === id); });
+    document.querySelectorAll(".panel").forEach(function (p) { p.classList.toggle("on", p.id === id); });
+  }
+  document.querySelectorAll(".tab").forEach(function (b) {
+    b.addEventListener("click", function () { openTab(b.dataset.p); });
+  });
+  // Deep links: #by-task, #population-shift, #llms open the matching leaderboard tab.
+  var HASH = { "#by-task": "p-task", "#population-shift": "p-shift", "#llms": "p-llm" };
+  if (location.hash === "#all-tasks") document.getElementById("all-tasks").open = true;
+  if (HASH[location.hash]) { openTab(HASH[location.hash]); document.getElementById("leaderboard").scrollIntoView(); }
+  document.getElementById("copy").addEventListener("click", function () {
+    var txt = document.getElementById("cmds").innerText, btn = this;
+    function done() { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1400); }
+    try {
+      navigator.clipboard.writeText(txt).then(done, fallback);
+    } catch (e) { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) {} document.body.removeChild(ta);
+    }
+  });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { threshold: .12 });
+    document.querySelectorAll(".reveal").forEach(function (e) { io.observe(e); });
+    // If the observer never fires (some embedded viewers), show everything.
+    setTimeout(function () { if (!document.querySelector(".reveal.in")) document.querySelectorAll(".reveal").forEach(function (e) { e.classList.add("in"); }); }, 1500);
+  } else { document.querySelectorAll(".reveal").forEach(function (e) { e.classList.add("in"); }); }
+  // Highlight the section in view in the top bar.
+  var links = {};
+  document.querySelectorAll("nav.top .links a").forEach(function (a) { links[a.getAttribute("href").slice(1)] = a; });
+  if ("IntersectionObserver" in window) {
+    var spy = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        Object.keys(links).forEach(function (k) { links[k].classList.toggle("on", k === e.target.id); });
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    Object.keys(links).forEach(function (k) { var s = document.getElementById(k); if (s) spy.observe(s); });
+  }
+  // On the anonymized site (/w/<id>/), the repository is at /r/<id>/.
+  var m = location.pathname.match(/^\/w\/([^/]+)\//);
+  if (m) ["code-link", "code-link-2"].forEach(function (id) { document.getElementById(id).href = "/r/" + m[1] + "/"; });
+})();
+</script>
+</body>
+</html>
