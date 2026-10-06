@@ -1,0 +1,16 @@
+[project]
+name = "automdbench"
+version = "0.1.0"
+description = "Auto-MD-bench: evaluating autoresearch agents on medical prediction tasks"
+requires-python = ">=3.10"
+dependencies = ["numpy", "pandas", "pyarrow", "scipy", "scikit-learn", "torch", "torchtuples", "pycox"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["automdbench"]
+
+[tool.setuptools.package-data]
+automdbench = ["templates/*.py"]

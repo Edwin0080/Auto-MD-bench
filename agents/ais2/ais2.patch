@@ -1,0 +1,417 @@
+--- a/ai_scientist/llm.py
++++ b/ai_scientist/llm.py
+@@ -133,6 +133,25 @@
+         new_msg_history = [
+             new_msg_history + [{"role": "assistant", "content": c}] for c in content
+         ]
++    elif "/" in model and not model.startswith(("bedrock", "vertex_ai", "ollama")):
++        # provider-prefixed model ids (org/model) through the OpenAI-compatible client
++        new_msg_history = msg_history + [{"role": "user", "content": msg}]
++        response = client.chat.completions.create(
++            model=model,
++            messages=[
++                {"role": "system", "content": system_message},
++                *new_msg_history,
++            ],
++            temperature=temperature,
++            max_tokens=MAX_NUM_TOKENS,
++            seed=0,
++            n=n_responses,
++            stop=None,
++        )
++        content = [r.message.content for r in response.choices]
++        new_msg_history = [
++            new_msg_history + [{"role": "assistant", "content": c}] for c in content
++        ]
+     elif model == "deepseek-coder-v2-0724":
+         new_msg_history = msg_history + [{"role": "user", "content": msg}]
+         response = client.chat.completions.create(
+@@ -346,6 +365,23 @@
+         )
+         content = response.choices[0].message.content
+         new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
++    elif "/" in model and not model.startswith(("bedrock", "vertex_ai", "ollama")):
++        # provider-prefixed model ids (org/model) through the OpenAI-compatible client
++        new_msg_history = msg_history + [{"role": "user", "content": msg}]
++        response = client.chat.completions.create(
++            model=model,
++            messages=[
++                {"role": "system", "content": system_message},
++                *new_msg_history,
++            ],
++            temperature=temperature,
++            max_tokens=MAX_NUM_TOKENS,
++            seed=0,
++            n=1,
++            stop=None,
++        )
++        content = response.choices[0].message.content
++        new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
+     elif model == "deepseek-coder-v2-0724":
+         new_msg_history = msg_history + [{"role": "user", "content": msg}]
+         response = client.chat.completions.create(
+@@ -501,6 +537,10 @@
+     elif "o1" in model or "o3" in model:
+         print(f"Using OpenAI API with model {model}.")
+         return openai.OpenAI(), model
++    elif "/" in model and not model.startswith(("bedrock", "vertex_ai", "ollama")):
++        # provider-prefixed model ids (org/model): OpenAI-compatible client, base URL from OPENAI_BASE_URL
++        print(f"Using OpenAI-compatible API with model {model}.")
++        return openai.OpenAI(), model
+     elif model == "deepseek-coder-v2-0724":
+         print(f"Using OpenAI API with {model}.")
+         return (
+--- a/ai_scientist/treesearch/agent_manager.py
++++ b/ai_scientist/treesearch/agent_manager.py
+@@ -10,6 +10,7 @@
+ import re
+ from .backend import query, FunctionSpec
+ import json
++import time
+ from rich import print
+ from .utils.serialize import parse_markdown_to_dict
+ from .utils.metric import WorstMetricValue
+@@ -140,6 +141,12 @@
+         self.journals: Dict[str, Journal] = {}
+         self.stage_history: List[StageTransition] = []
+         self.completed_stages: List[str] = []
++        # Time version: the stage iteration quotas 20/12/12/18 become shares of the run's time
++        # budget. Inert when cfg.agent.stages.time_budget_min is unset.
++        self._run_t0 = time.time()
++        self._run_end: Optional[float] = None
++        self._stage_started: Dict[int, float] = {}
++        self._stage_deadlines: Dict[int, float] = self._compute_stage_deadlines()
+         self.main_stage_dict: Dict[int, str] = {
+             1: "initial_implementation",
+             2: "baseline_tuning",
+@@ -176,6 +183,47 @@
+             self.cfg.agent.steps,
+         )
+ 
++    def _compute_stage_deadlines(self, from_stage: int = 1, now: Optional[float] = None) -> Dict[int, float]:
++        """Deadline per MAIN stage. The time still left in the
++        run budget is split among the stages that have not started yet, in proportion to the
++        factory iteration quotas (20/12/12/18 -> 12:12:18 after stage 1, 12:18 after stage 2, ...).
++        Called at run start (from_stage=1) and again whenever a main stage starts, so a stage that
++        ends early hands its unused time to ALL later stages by quota, not just to the next one.
++        The last stage's deadline is always the run budget; a stage that overruns its deadline
++        (by at most one step) shrinks the later stages accordingly."""
++        stages_cfg = getattr(self.cfg.agent, "stages", None)
++        budget_min = getattr(stages_cfg, "time_budget_min", None) if stages_cfg is not None else None
++        if not budget_min:
++            return {}
++        quota = list(getattr(stages_cfg, "time_quota", None) or [20, 12, 12, 18])
++        if self._run_end is None:
++            self._run_end = self._run_t0 + float(budget_min) * 60.0
++        now = self._run_t0 if now is None else now
++        remaining = max(self._run_end - now, 0.0)
++        rest = quota[from_stage - 1:]
++        total = float(sum(rest)) or 1.0
++        deadlines: Dict[int, float] = {}
++        acc = 0.0
++        for k, q in enumerate(rest, start=from_stage):
++            acc += float(q)
++            deadlines[k] = now + remaining * acc / total
++        deadlines[len(quota)] = self._run_end
++        print("[cyan]Stage time budget: %s min total; deadlines recomputed at stage %d start (min from run start): %s[/cyan]" % (
++            budget_min, from_stage, ", ".join("stage %d: %.0f" % (k, (d - self._run_t0) / 60.0) for k, d in deadlines.items())))
++        return deadlines
++
++    def _stage_time_exhausted(self, main_stage_num: int) -> bool:
++        dl = self._stage_deadlines.get(main_stage_num)
++        return dl is not None and time.time() >= dl
++
++    def _stage_time_fraction(self, main_stage_num: int) -> float:
++        """Elapsed fraction of this main stage's own time window (0 when deadlines are off)."""
++        dl = self._stage_deadlines.get(main_stage_num)
++        if dl is None:
++            return 0.0
++        start = self._stage_started.get(main_stage_num, self._run_t0)
++        return (time.time() - start) / max(dl - start, 1.0)
++
+     def _get_task_desc_str(self):
+         task_desc = """You are an ambitious AI researcher who is looking to publish a paper that will contribute significantly to the field.
+ You have an idea and you want to conduct creative experiments to gain scientific insights.
+@@ -293,14 +341,14 @@
+             stage1_substages = [s for s in self.stages if s.name.startswith("1_")]
+             if not stage1_substages:
+                 raise ValueError(f"No stage 1 substages found in {self.stages}")
+-            best_stage1_node = self._get_best_implementation(stage1_substages[-1].name)
++            best_stage1_node = self._get_best_implementation_fallback(stage1_substages[-1].name)
+             best_stage2_node = None
+             best_stage3_node = None
+         elif main_stage == 3:
+             stage2_substages = [s for s in self.stages if s.name.startswith("2_")]
+             if not stage2_substages:
+                 raise ValueError(f"No stage 2 substages found in {self.stages}")
+-            best_stage2_node = self._get_best_implementation(stage2_substages[-1].name)
++            best_stage2_node = self._get_best_implementation_fallback(stage2_substages[-1].name)
+             best_stage1_node = None
+             best_stage3_node = None
+         elif main_stage == 4:
+@@ -308,7 +356,7 @@
+             stage3_substages = [s for s in self.stages if s.name.startswith("3_")]
+             if stage3_substages:
+                 last_substage = stage3_substages[-1]
+-                best_stage3_node = self._get_best_implementation(last_substage.name)
++                best_stage3_node = self._get_best_implementation_fallback(last_substage.name)
+                 best_stage2_node = None
+                 best_stage1_node = None
+             else:
+@@ -410,6 +458,17 @@
+     def _check_stage_completion(self, stage: Stage) -> bool:
+         """Check if current stage is complete based on criteria"""
+         journal = self.journals[stage.name]
++        # time version: the deadline of the main stage ends it
++        main_stage_num = self.parse_stage_names(stage.name)[0]
++        if self._stage_time_exhausted(main_stage_num):
++            logger.info(f"Stage {stage.name} completed: stage time budget exhausted")
++            print(f"[green]Stage {stage.name} completed: stage time budget exhausted[/green]")
++            if main_stage_num == 1 and len(journal.good_nodes) == 0:
++                logger.error(f"Initial stage {stage.name} did not find a working implementation before its time budget ran out.")
++                print("[red]Experiment ended: Could not find working implementation in initial stage before its time budget ran out[/red]")
++                self.current_stage = None  # This will cause the run loop to exit
++                return True, "Failed to find working implementation (time budget exhausted)"
++            return True, "Stage time budget exhausted"
+         # Terminate if max iterations reached
+         if len(journal.nodes) >= stage.max_iterations:
+             logger.info(f"Stage {stage.name} completed: reached max iterations")
+@@ -513,7 +572,7 @@
+             print(f"[cyan]exec_time_minutes: {exec_time_minutes}[/cyan]")
+             if len(self.journals[stage.name].nodes) > (
+                 self.cfg.agent.stages.stage3_max_iters / 2
+-            ):
++            ) or self._stage_time_fraction(3) > 0.5:  # time version: same rule on the time axis
+                 if exec_time_minutes < self.cfg.exec.timeout / 60 / 2:
+                     exec_time_feedback = (
+                         f"Implementation works but runs too quickly ({exec_time_minutes:.2f} minutes)."
+@@ -547,6 +606,33 @@
+             copied_node.parent = None
+             copied_node.children = set()
+             return copied_node
++        return None
++
++    def _get_best_implementation_fallback(self, stage_name: str) -> Optional[Node]:
++        """Time version. The cumulative main-stage deadline can end the LAST sub-stage of a
++        main stage after only a few nodes, all buggy. Factory AIS then finds no best implementation in that
++        sub-stage's journal and aborts the whole experiment ('Something went wrong so finishing the experiment').
++        Under its own iteration quotas this cannot happen, because every sub-stage runs to its own completion
++        (LLM-judged complete, which implies a working node, or its full quota). Restore that assumption: when the
++        named sub-stage has no working node, take the best implementation of the latest earlier sub-stage of the
++        same main stage that has one. The search logic itself is untouched."""
++        best = self._get_best_implementation(stage_name)
++        if best is not None:
++            return best
++        try:
++            main = self.parse_stage_names(stage_name)[0]
++        except Exception:
++            return None
++        prefix = f"{main}_"
++        earlier = [s.name for s in self.stages if s.name.startswith(prefix) and s.name != stage_name]
++        for name in reversed(earlier):
++            cand = self._get_best_implementation(name)
++            if cand is not None:
++                msg = (f"time version: {stage_name} ended at the stage deadline without a working node; "
++                       f"using the best implementation of {name} instead")
++                logger.warning(msg)
++                print(f"[yellow]{msg}[/yellow]")
++                return cand
+         return None
+ 
+     def _generate_substage_goal(self, main_stage_goal: str, journal: Journal) -> str:
+@@ -694,6 +780,11 @@
+         while self.current_stage:  # Main stage loop
+             main_stage = self.parse_stage_names(self.current_stage.name)[0]
+             print(f"[green]Starting main stage: {main_stage}[/green]")
++            # time version: mark the stage start and re-split the remaining time by quota
++            if int(main_stage) not in self._stage_started:
++                self._stage_started[int(main_stage)] = time.time()
++                if self._stage_deadlines:
++                    self._stage_deadlines.update(self._compute_stage_deadlines(int(main_stage), time.time()))
+             print(f"[cyan]Goals: {self.current_stage.goals}[/cyan]")
+ 
+             current_substage = self.current_stage
+@@ -706,7 +797,7 @@
+                         prev_stage = self.stage_history[-1].from_stage
+                         print(f"[cyan]prev_stage: {prev_stage}[/cyan]")
+                         print(f"[cyan]self.stage_history: {self.stage_history}[/cyan]")
+-                        prev_best = self._get_best_implementation(prev_stage)
++                        prev_best = self._get_best_implementation_fallback(prev_stage)
+                         if prev_best:
+                             self.journals[self.current_stage.name].append(prev_best)
+                         else:
+@@ -736,7 +827,7 @@
+                         if main_stage_complete:
+                             # After main stage completion, run multi-seed eval on the best node
+                             if current_substage.stage_number in [1, 2, 3, 4]:
+-                                best_node = self._get_best_implementation(
++                                best_node = self._get_best_implementation_fallback(
+                                     current_substage.name
+                                 )
+                                 if best_node:
+--- a/ai_scientist/treesearch/bfts_utils.py
++++ b/ai_scientist/treesearch/bfts_utils.py
+@@ -62,8 +62,15 @@
+     config["workspace_dir"] = idea_dir
+ 
+     # make an empty data directory
++    base_data = config.get("data_dir")
+     data_dir = osp.join(idea_dir, "data")
+     os.makedirs(data_dir, exist_ok=True)
++    # copy the task files from the configured data_dir into the run's data dir
++    if base_data and osp.isdir(base_data) and osp.abspath(base_data) != osp.abspath(data_dir):
++        for _f in os.listdir(base_data):
++            _s = osp.join(base_data, _f)
++            if osp.isfile(_s):
++                shutil.copy(_s, data_dir)
+     config["data_dir"] = data_dir
+ 
+     # make an empty log directory
+--- a/ai_scientist/treesearch/interpreter.py
++++ b/ai_scientist/treesearch/interpreter.py
+@@ -207,7 +207,10 @@
+             self._drain_queues()
+             self.process.join(timeout=2)
+         # don't wait for gc, clean up immediately
+-        self.process.close()
++        try:
++            self.process.close()
++        except ValueError:  # still reaping after SIGKILL; drop the handle
++            pass
+         self.process = None  # type: ignore
+ 
+     def run(self, code: str, reset_session=True) -> ExecutionResult:
+@@ -246,7 +249,8 @@
+             logger.critical(msg)
+             while not self.result_outq.empty():
+                 logger.error(f"REPL output queue dump: {self.result_outq.get()}")
+-            raise RuntimeError(msg) from None
++            self.cleanup_session()  # failed node, not a crashed run
++            return ExecutionResult(term_out=[msg], exec_time=0, exc_type="RuntimeError", exc_info={}, exc_stack=[])
+         assert state[0] == "state:ready", state
+         start_time = time.time()
+ 
+@@ -270,7 +274,8 @@
+                         logger.error(
+                             f"REPL output queue dump: {self.result_outq.get()}"
+                         )
+-                    raise RuntimeError(msg) from None
++                    self.cleanup_session()  # dead child: failed node, not a crashed run
++                    return ExecutionResult(term_out=[msg], exec_time=time.time() - start_time, exc_type="RuntimeError", exc_info={}, exc_stack=[])
+ 
+                 # child is alive and still executing -> check if we should sigint..
+                 if self.timeout is None:
+@@ -298,7 +303,8 @@
+         # the feeder thread in child might still be adding to the queue
+         while not self.result_outq.empty() or not output or output[-1] != "<|EOF|>":
+             output.append(self.result_outq.get())
+-        output.pop()  # remove the EOF marker
++        if output:  # a killed child may leave no EOF marker
++            output.pop()  # remove the EOF marker
+ 
+         e_cls_name, exc_info, exc_stack = state[1:]
+ 
+--- a/ai_scientist/treesearch/parallel_agent.py
++++ b/ai_scientist/treesearch/parallel_agent.py
+@@ -15,6 +15,7 @@
+ from .utils.response import extract_code, extract_text_up_to_code, wrap_code
+ import copy
+ import pickle
++import shutil
+ from dataclasses import asdict
+ from omegaconf import OmegaConf
+ 
+@@ -1436,6 +1437,19 @@
+         workspace = os.path.join(cfg.workspace_dir, f"process_{process_id}")
+         os.makedirs(workspace, exist_ok=True)
+         print(f"Process {process_id} using workspace: {workspace}")
++        # the task description says the data files are in
++        # the working directory; make that true for the node by copying the
++        # run input files (copies, not links: nodes may overwrite files in place).
++        import shutil as _shutil
++        _inp = os.path.join(cfg.workspace_dir, "input")
++        if os.path.isdir(_inp):
++            for _f in os.listdir(_inp):
++                _s, _d = os.path.join(_inp, _f), os.path.join(workspace, _f)
++                if os.path.isfile(_s) and not os.path.exists(_d):
++                    try:
++                        _shutil.copy2(_s, _d)
++                    except OSError:
++                        pass
+         # Create process-specific working directory
+         working_dir = os.path.join(workspace, "working")
+         os.makedirs(working_dir, exist_ok=True)
+@@ -1521,6 +1535,22 @@
+                         child_node = worker_agent._improve(parent_node)
+                         child_node.parent = parent_node
+ 
++            # keep each node's submission (1/2): a workspace is reused by later nodes, so a
++            # submission.csv sitting here before this node runs belongs to its
++            # predecessor. Remember what is there, and below claim the file only if it
++            # actually changed while this node was executing.
++            _mb_paths = [
++                Path(working_dir).parent / "submission.csv",  # interpreter cwd = workspace root
++                Path(working_dir) / "submission.csv",         # some nodes write into working/
++            ]
++            _mb_before = {}
++            for _mb_p in _mb_paths:
++                try:
++                    _mb_st = _mb_p.stat()
++                    _mb_before[str(_mb_p)] = (_mb_st.st_mtime_ns, _mb_st.st_size)
++                except OSError:
++                    pass
++
+             # Execute and parse results
+             print("Running code")
+             exec_result = process_interpreter.run(child_node.code, True)
+@@ -1530,6 +1560,37 @@
+             worker_agent.parse_exec_result(
+                 node=child_node, exec_result=exec_result, workspace=working_dir
+             )
++
++            # keep each node's submission (2/2): keep this node's submission under its own node id.
++            # Four workers run concurrently and reuse their directories, so the sandbox-root
++            # mirror plus the archiver cannot say which node wrote which version; the file
++            # name here settles it. Copy (not move): the node keeps its own file, the mirror
++            # still promotes it, the archive stream is unchanged. Placed before the is_buggy
++            # branch on purpose, so a node later judged buggy still leaves its submission
++            # behind. Never allowed to fail the run.
++            try:
++                for _mb_p in _mb_paths:
++                    try:
++                        _mb_st = _mb_p.stat()
++                    except OSError:
++                        continue
++                    if _mb_before.get(str(_mb_p)) == (_mb_st.st_mtime_ns, _mb_st.st_size):
++                        continue  # untouched leftover from an earlier node in this workspace
++                    _mb_dir = Path(cfg.workspace_dir).parent / "submissions_by_node"
++                    _mb_dir.mkdir(parents=True, exist_ok=True)
++                    shutil.copy2(_mb_p, _mb_dir / f"{child_node.id}.csv")
++                    print(
++                        f"[green]kept submission for node {child_node.id} "
++                        f"from {_mb_p}[/green]"
++                    )
++                    logger.info(
++                        f"kept submission for node {child_node.id} from {_mb_p}"
++                    )
++                    break  # workspace root wins over working/
++            except Exception as _mb_e:  # noqa: BLE001
++                logger.warning(
++                    f"could not keep submission for node {child_node.id}: {_mb_e}"
++                )
+ 
+             # Add check for saved data files
+             data_files = [f for f in os.listdir(working_dir) if f.endswith(".npy")]
+--- a/ai_scientist/treesearch/utils/metric.py
++++ b/ai_scientist/treesearch/utils/metric.py
+@@ -38,7 +38,9 @@
+         if other.value is None:
+             return True
+ 
+-        assert type(self) is type(other) and (self.maximize == other.maximize)
++        if type(self) is not type(other) or self.maximize != other.maximize:
++            # nodes reported different metric types or directions: incomparable, not a crash
++            return False
+ 
+         # For multi-dataset metrics, use mean for comparison
+         self_val = (

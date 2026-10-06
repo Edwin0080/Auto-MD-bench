@@ -1,0 +1,62 @@
+--- a/aide/interpreter.py
++++ b/aide/interpreter.py
+@@ -195,11 +195,15 @@
+                 if self.process.exitcode is None:
+                     logger.error("Process refuses to die, using SIGKILL")
+                     os.kill(self.process.pid, signal.SIGKILL)
++                    self.process.join(timeout=5)  # reap before close
+         except Exception as e:
+             logger.error(f"Error during process cleanup: {e}")
+         finally:
+             if self.process is not None:
+-                self.process.close()
++                try:
++                    self.process.close()
++                except ValueError:  # still reaping; drop the handle
++                    pass
+                 self.process = None
+ 
+     def run(self, code: str, reset_session=True) -> ExecutionResult:
+@@ -238,7 +242,8 @@
+             logger.critical(msg)
+             while not self.result_outq.empty():
+                 logger.error(f"REPL output queue dump: {self.result_outq.get()}")
+-            raise RuntimeError(msg) from None
++            self.cleanup_session()  # failed node, not a crashed run
++            return ExecutionResult(term_out=[msg], exec_time=0, exc_type="RuntimeError", exc_info={}, exc_stack=[])
+         assert state[0] == "state:ready", state
+         start_time = time.time()
+ 
+@@ -262,7 +267,8 @@
+                         logger.error(
+                             f"REPL output queue dump: {self.result_outq.get()}"
+                         )
+-                    raise RuntimeError(msg) from None
++                    self.cleanup_session()  # dead child: failed node, not a crashed run
++                    return ExecutionResult(term_out=[msg], exec_time=time.time() - start_time, exc_type="RuntimeError", exc_info={}, exc_stack=[])
+ 
+                 # child is alive and still executing -> check if we should sigint..
+                 if self.timeout is None:
+@@ -296,7 +302,8 @@
+                 output.append(self.result_outq.get(timeout=1))
+             except queue.Empty:
+                 continue
+-        output.pop()  # remove the EOF marker
++        if output:  # a killed child may leave no EOF marker
++            output.pop()  # remove the EOF marker
+ 
+         e_cls_name, exc_info, exc_stack = state[1:]
+ 
+--- a/aide/utils/metric.py
++++ b/aide/utils/metric.py
+@@ -29,7 +29,9 @@
+         if other.value is None:
+             return True
+ 
+-        assert type(self) is type(other) and (self.maximize == other.maximize)
++        if type(self) is not type(other) or self.maximize != other.maximize:
++            # nodes reported different metric types or directions: incomparable, not a crash
++            return False
+ 
+         if self.value == other.value:
+             return False

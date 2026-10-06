@@ -1,0 +1,76 @@
+# AI Scientist v2 tree-search config. run.sh fills __DATA_DIR__, __BUDGET_MIN__ and __MODEL__.
+# Shipped defaults except: 3600 s per node, all LLM roles on one model, report off, and the
+# stage quotas 20/12/12/18 turned into time shares of the budget (ais2.patch); the iteration
+# caps are out of reach so that only time ends a stage.
+data_dir: "__DATA_DIR__"
+preprocess_data: False
+
+goal: null
+eval: null
+
+log_dir: logs
+workspace_dir: workspaces
+
+copy_data: True
+
+exp_name: run
+
+exec:
+  timeout: 3600
+  agent_file_name: runfile.py
+  format_tb_ipython: False
+
+generate_report: False
+report:
+  model: __MODEL__
+  temp: 1.0
+
+experiment:
+  num_syn_datasets: 1
+
+debug:
+  stage4: False
+
+agent:
+  type: parallel
+  num_workers: 4
+  stages:
+    stage1_max_iters: 100000
+    stage2_max_iters: 100000
+    stage3_max_iters: 100000
+    stage4_max_iters: 100000
+    time_budget_min: __BUDGET_MIN__
+    time_quota: [20, 12, 12, 18]
+  steps: 5
+  k_fold_validation: 1
+  multi_seed_eval:
+    num_seeds: 3
+  expose_prediction: False
+  data_preview: False
+
+  code:
+    model: __MODEL__
+    temp: 1.0
+    max_tokens: 12000
+
+  feedback:
+    model: __MODEL__
+    temp: 0.5
+    max_tokens: 8192
+
+  vlm_feedback:
+    model: __MODEL__
+    temp: 0.5
+    max_tokens: null
+
+  search:
+    max_debug_depth: 3
+    debug_prob: 0.5
+    num_drafts: 3
+
+  summary:
+    model: __MODEL__
+    temp: 0.3
+  select_node:
+    model: __MODEL__
+    temp: 0.3

@@ -1,0 +1,6 @@
+data/
+work/
+packages/
+runs/
+__pycache__/
+*.egg-info/
