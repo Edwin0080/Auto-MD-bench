@@ -355,7 +355,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
     <div class="btns">
       <span class="btn off" title="Available after the review period">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>Paper</span>
-      <a class="btn primary" id="code-link" href="../README.md">
+      <a class="btn primary" id="code-link" href="https://anonymous.4open.science/r/Auto-MD-bench" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
       <a class="btn" href="#tasks">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>Tasks</a>
@@ -394,7 +394,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
       <a href="#start">Get started</a>
       <a href="#citation">Cite</a>
     </div>
-    <a class="navbtn" id="code-link-2" href="../README.md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
+    <a class="navbtn" id="code-link-2" href="https://anonymous.4open.science/r/Auto-MD-bench" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
   </div>
 </nav>
 
@@ -614,9 +614,9 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
     <div class="two" style="margin-top:48px">
       <div class="prose">
         <h3>Averaged ranks are not probabilities</h3>
-        <p>Experiments that submit averaged ranks as probabilities account for 75% of the ECE difference from the simple baseline models while making up 14% of valid experiments. Averaged ranks express relative ordering rather than event probabilities.</p>
+        <p>Experiments that submit averaged ranks as probabilities make up 14% of valid experiments and account for 75% of the ECE difference from the simple baseline models.</p>
         <h3 style="margin-top:22px">Reweighting without recalibration</h3>
-        <p>Handling class imbalance changes the relative weight of events and non-events during training and can distort the resulting probabilities. Among experiments that do this without averaged ranks, mean ECE is 0.160 without recalibration and 0.008 with it.</p>
+        <p>Handling class imbalance reweights events and non-events during training, which changes the predicted probabilities. In these experiments (averaged ranks excluded), mean ECE is 0.160 without recalibration and 0.008 with it.</p>
       </div>
       <div>
         <h3>Stating calibration in the objective</h3>
@@ -645,7 +645,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
     <p class="note">Mean ± SD over three repetitions; categories can overlap. Code review also found errors in handling censored outcomes in 8 of 79 valid survival submissions, all of which still beat their task's simple baseline score.</p>
     <figure class="figure-card reveal" style="margin-top:40px">
       <a href="assets/modeling_changes.png" target="_blank" rel="noopener" class="zoom"><img src="assets/modeling_changes.png" alt="Share of sampled solution pairs with ensembling, hyperparameter tuning and feature engineering changes, early, middle and late in the search, for each agent." width="2025" height="584" loading="lazy"></a>
-      <figcaption><b>Modeling changes during agent search.</b> Points show the percentage of sampled solution pairs containing each type of modeling change. Early, middle, and late indicate relative positions in the chronologically ordered sequence of solution pairs within each run, rather than equal intervals of elapsed time. Pairs may contain multiple types of change.</figcaption>
+      <figcaption><b>Modeling changes during agent search.</b> Points show the percentage of sampled solution pairs containing each type of modeling change. Early, middle, and late indicate relative positions in the chronologically ordered sequence of solution pairs within each run. Pairs may contain multiple types of change.</figcaption>
     </figure>
   </div>
 </section>
@@ -654,11 +654,11 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
   <div class="wrap">
     <p class="kicker">Related benchmarks</p>
     <h2>Evaluation for medical use</h2>
-    <p class="lead">Agent benchmarks for machine learning and biomedicine rarely assess risk calibration or external validation, and none of these assesses both.</p>
+    <p class="lead">In existing agent benchmarks, calibration and external validation receive uneven attention.</p>
     <div class="tbl-wrap">
       <table>
         <thead><tr><th>Benchmark</th><th>Domain</th><th class="num">Tasks</th><th style="text-align:center">Calibration</th><th style="text-align:center">External validation</th></tr></thead>
-        <tbody id="compare-body"><tr><td>MLE-bench</td><td>General ML (Kaggle)</td><td class="num">75</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>HealthAgentBench</td><td>Healthcare workflows</td><td class="num">54</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>MedAgentBoard</td><td>Diverse medical tasks</td><td class="num">100</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>MedAgentGym</td><td>Biomedical data science</td><td class="num">129</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>AutoHealth</td><td>Health prediction</td><td class="num">17</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>ACP-Bench</td><td>Computational pathology</td><td class="num">41</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>BioML-bench</td><td>Biomedical ML</td><td class="num">24</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td>BioXArena</td><td>Biomedical ML</td><td class="num">76</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td></tr><tr style="background: var(--orange-soft);"><td><b>Auto-MD-bench (ours)</b></td><td>Clinical prediction</td><td class="num">15</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td></tr></tbody>
+        <tbody id="compare-body"><tr><td><a href="https://arxiv.org/abs/2410.07095" rel="noopener" target="_blank">MLE-bench</a></td><td>General ML (Kaggle)</td><td class="num">75</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://arxiv.org/abs/2606.31179" rel="noopener" target="_blank">HealthAgentBench</a></td><td>Healthcare workflows</td><td class="num">54</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://arxiv.org/abs/2505.12371" rel="noopener" target="_blank">MedAgentBoard</a></td><td>Diverse medical tasks</td><td class="num">100</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://arxiv.org/abs/2506.04405" rel="noopener" target="_blank">MedAgentGym</a></td><td>Biomedical data science</td><td class="num">129</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://arxiv.org/abs/2602.01078" rel="noopener" target="_blank">AutoHealth</a></td><td>Health prediction</td><td class="num">17</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://arxiv.org/abs/2607.02598" rel="noopener" target="_blank">ACP-Bench</a></td><td>Computational pathology</td><td class="num">41</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://doi.org/10.1101/2025.09.01.673319" rel="noopener" target="_blank">BioML-bench</a></td><td>Biomedical ML</td><td class="num">24</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td></tr><tr><td><a href="https://arxiv.org/abs/2605.15766" rel="noopener" target="_blank">BioXArena</a></td><td>Biomedical ML</td><td class="num">76</td><td style="text-align:center;font-size:17px;color:#b7c0cb">–</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td></tr><tr style="background: var(--orange-soft);"><td><b>Auto-MD-bench (ours)</b></td><td>Clinical prediction</td><td class="num">15</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td><td style="text-align:center;font-size:17px;color:var(--green)">✓</td></tr></tbody>
       </table>
     </div>
     <p class="note">✓ reported; – not reported. Calibration: explicit assessment of probability calibration. External validation: a distinct cohort, site or time period. MedAgentGym counts task categories.</p>
@@ -670,7 +670,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
     <div>
       <p class="kicker">Get started</p>
       <h2>Build, run and grade in a few commands</h2>
-      <p class="lead">The ten public tasks build with one script. MIMIC-IV, eICU-CRD and SEER need their own data agreements; the repository lists the steps to get access.</p>
+      <p class="lead">Needs Linux or macOS with bash and Python 3.10 or later; on Windows, use WSL. The ten public tasks build with one script. MIMIC-IV, eICU-CRD and SEER need their own data agreements; the repository lists the steps to get access.</p>
       <div class="howto">
         <p><b>Grade any prediction file.</b> The grader reads only the submission and the hidden labels; it never runs agent code.</p>
         <p><b>Bring your own agent.</b> Any shell command that leaves <code class="formula">submission.csv</code> in its sandbox can be evaluated. Run scripts and patches for the four agents in the paper are included.</p>
@@ -678,18 +678,23 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 28px; justify-content: 
     </div>
     <div class="codebox">
       <div class="bar2"><span class="dots"><i></i><i></i><i></i></span><span class="ttl">terminal</span><button class="copy js-only" id="copy">Copy</button></div>
-<pre id="cmds"><span class="c"># install (Python 3.10 or later)</span>
+<pre id="cmds"><span class="c"># download and unzip the code, then install it</span>
+cd Auto-MD-bench
 pip install -e .
 
 <span class="c"># download and build the 10 public tasks</span>
 bash scripts/download_public_data.sh data/raw
 bash scripts/build_public_tasks.sh data/raw packages
 
-<span class="c"># grade a submission</span>
+<span class="c"># check the pipeline with a dummy agent (no LLM)</span>
+python -m automdbench.run support --budget-min 5 \
+    --agent "bash $PWD/agents/dummy/run.sh" --run-dir runs/dummy/support
+
+<span class="c"># grade a prediction file</span>
 python -m automdbench.grade support \
     packages/support/public/sample_submission.csv
 
-<span class="c"># run an agent for 12 hours, then grade its submission</span>
+<span class="c"># run Codex for 12 hours (LLM endpoint: see README)</span>
 python -m automdbench.run support --budget-min 720 \
     --agent "bash $PWD/agents/codex/run.sh $PWD/agents/codex/prompt.txt" \
     --run-dir runs/codex/support_1</pre>
@@ -894,16 +899,20 @@ document.documentElement.className += " js";
 
   // ---- related benchmarks (paper comparison table)
   var CMP = [
-    ["MLE-bench", "General ML (Kaggle)", "75", 0, 0], ["HealthAgentBench", "Healthcare workflows", "54", 0, 0],
-    ["MedAgentBoard", "Diverse medical tasks", "100", 0, 0], ["MedAgentGym", "Biomedical data science", "129", 0, 0],
-    ["AutoHealth", "Health prediction", "17", 1, 0], ["ACP-Bench", "Computational pathology", "41", 1, 0],
-    ["BioML-bench", "Biomedical ML", "24", 0, 0], ["BioXArena", "Biomedical ML", "76", 0, 1],
+    ["MLE-bench", "General ML (Kaggle)", "75", 0, 0, "https://arxiv.org/abs/2410.07095"],
+    ["HealthAgentBench", "Healthcare workflows", "54", 0, 0, "https://arxiv.org/abs/2606.31179"],
+    ["MedAgentBoard", "Diverse medical tasks", "100", 0, 0, "https://arxiv.org/abs/2505.12371"],
+    ["MedAgentGym", "Biomedical data science", "129", 0, 0, "https://arxiv.org/abs/2506.04405"],
+    ["AutoHealth", "Health prediction", "17", 1, 0, "https://arxiv.org/abs/2602.01078"],
+    ["ACP-Bench", "Computational pathology", "41", 1, 0, "https://arxiv.org/abs/2607.02598"],
+    ["BioML-bench", "Biomedical ML", "24", 0, 0, "https://doi.org/10.1101/2025.09.01.673319"],
+    ["BioXArena", "Biomedical ML", "76", 0, 1, "https://arxiv.org/abs/2605.15766"],
     ["Auto-MD-bench (ours)", "Clinical prediction", "15", 1, 1]
   ];
   var cb = document.getElementById("compare-body"); cb.innerHTML = "";
   CMP.forEach(function (c, i) {
     var mk = function (v) { return "<td style='text-align:center;font-size:17px;color:" + (v ? "var(--green)" : "#b7c0cb") + "'>" + (v ? "✓" : "–") + "</td>"; };
-    var tr = el("tr", "<td>" + (i === CMP.length - 1 ? "<b>" + c[0] + "</b>" : c[0]) + "</td><td>" + c[1] + "</td><td class=num>" + c[2] + "</td>" + mk(c[3]) + mk(c[4]));
+    var tr = el("tr", "<td>" + (c[5] ? "<a href='" + c[5] + "' target='_blank' rel='noopener'>" + c[0] + "</a>" : "<b>" + c[0] + "</b>") + "</td><td>" + c[1] + "</td><td class=num>" + c[2] + "</td>" + mk(c[3]) + mk(c[4]));
     if (i === CMP.length - 1) tr.style.background = "var(--orange-soft)";
     cb.appendChild(tr);
   });
@@ -982,9 +991,6 @@ document.documentElement.className += " js";
     }, { rootMargin: "-45% 0px -50% 0px" });
     Object.keys(links).forEach(function (k) { var s = document.getElementById(k); if (s) spy.observe(s); });
   }
-  // On the anonymized site (/w/<id>/), the repository is at /r/<id>/.
-  var m = location.pathname.match(/^\/w\/([^/]+)\//);
-  if (m) ["code-link", "code-link-2"].forEach(function (id) { document.getElementById(id).href = "/r/" + m[1] + "/"; });
 })();
 </script>
 </body>

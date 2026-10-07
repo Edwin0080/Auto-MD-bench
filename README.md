@@ -11,7 +11,7 @@ another cohort, hospital or time period.
 
 ![Overview](docs/assets/overview.png)
 
-The project page with the results is `docs/index.html`; open it in a browser.
+Project page with the results: [docs/index.html](docs/index.html).
 
 **Contents**
 [Tasks](#tasks) ·
@@ -60,7 +60,7 @@ Each task description is in `tasks/<dataset>/<task>.md`, exactly as the agents s
 
 ## Install
 
-Python 3.10 or later.
+Linux or macOS with bash and Python 3.10 or later; on Windows, use WSL. In the repository folder:
 
 ```bash
 pip install -e .
