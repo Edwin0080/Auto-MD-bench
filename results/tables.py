@@ -72,7 +72,8 @@ def task_table(runs, ref, col, title):
             r = main[(main.agent == a) & (main.task == t)]
             xs = (r if col == "normalized" else r[r.valid])[col].tolist()
             cells.append(pm(xs) + ("" if len(xs) == 3 else f" (n={len(xs)})"))
-        print(f"  {t:20s} ref {ref.loc[t, 'ece' if col == 'ece' else 'primary']:.3f} | " + " | ".join(cells))
+        r0 = ref.loc[t, "ece"] if col == "ece" else normalize(get(t).metric, ref.loc[t, "primary"])
+        print(f"  {t:20s} ref {r0:.3f} | " + " | ".join(cells))
 
 
 def llm_table(runs):
